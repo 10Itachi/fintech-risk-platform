@@ -1,0 +1,49 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: risk-decision-service
+  datasource:
+    # 1. Added createDatabaseIfNotExist=true to handle the "Unknown Database" error
+    url: jdbc:mysql://localhost:3306/gbank_risk_assessments?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: Emma10watson*
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    # 2. Set to 'create' for the VERY FIRST run only.
+    # After you see your tables in MySQL, change this to 'update'.
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        # Cleaned up the dialect property (Spring Boot 3 uses MySQLDialect for 8+)
+        dialect: org.hibernate.dialect.MySQLDialect
+security:
+  jwt:
+    enabled: true
+    secret: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    issuer: "transaction-service"
+    audience: "risk-decision-service"
+
+risk:
+  policy:
+    maxSingleAmount: 50000
+    maxDailyAmount: 100000
+    cardWithdrawalLimit: 50000
+
+    blockedCountries:
+      - PK
+      - BD
+      - AF
+
+    maxFutureDrift: PT2M   # 2 minutes
+    maxPastDrift: PT5M     # 5 minutes
+
+    declineThreshold: 0.80
+    reviewThreshold: 0.50
+    softDeclineScore: 80
+    softReviewScore: 40
