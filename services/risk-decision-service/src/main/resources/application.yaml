@@ -31,6 +31,8 @@ security:
 
 risk:
   policy:
+    version: "2026-01-30"
+    activated_at: "2026-01-30T18:45:00Z"
     maxSingleAmount: 50000
     maxDailyAmount: 100000
     cardWithdrawalLimit: 50000

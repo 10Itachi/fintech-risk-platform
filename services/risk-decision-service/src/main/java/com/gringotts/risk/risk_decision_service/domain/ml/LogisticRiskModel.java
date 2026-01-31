@@ -19,5 +19,8 @@ public class LogisticRiskModel {
         MlFeatureVector features = featureBuilder.build(ctx);
         return model.predict(features);
     }
+    public MlModelArtifact getModel() {
+        return this.model;
+    }
 }
 

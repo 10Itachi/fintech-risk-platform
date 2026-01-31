@@ -1,4 +1,9 @@
 {
+    "metadata": {
+        "model_name": "fraud_detection_logistic_regression",
+        "model_version": "1.1.0-20260130-184313",
+        "trained_at": "2026-01-30T18:43:13.716167"
+    },
     "model_type": "logistic_regression",
     "intercept": -0.8999295819366835,
     "coefficients": {

@@ -2,6 +2,8 @@ package com.gringotts.risk.risk_decision_service.domain.ml;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.stereotype.Component;
+
 import java.util.Map;
 
 @Getter

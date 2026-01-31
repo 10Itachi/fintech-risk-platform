@@ -1,7 +1,10 @@
 package com.gringotts.risk.risk_decision_service.domain.ml;
 
+import org.springframework.stereotype.Component;
+
 import java.util.HashMap;
 import java.util.Map;
+
 
 public class MlFeatureVector {
 

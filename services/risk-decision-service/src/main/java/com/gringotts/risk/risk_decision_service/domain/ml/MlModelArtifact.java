@@ -1,15 +1,20 @@
 package com.gringotts.risk.risk_decision_service.domain.ml;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 @Getter
 @Setter
 public class MlModelArtifact {
+    @JsonProperty("metadata")
+    private ModelMetadata metadata;
     private double intercept;
     private Map<String, Double> coefficients;
+    @JsonProperty("feature_order")
     private List<String> feature_order;
     private Scaler scaler;
 
@@ -38,4 +43,5 @@ public class MlModelArtifact {
     private double sigmoid(double z) {
         return 1.0 / (1.0 + Math.exp(-z));
     }
+
 }

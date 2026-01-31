@@ -65,7 +65,8 @@ public class  RiskDecisionApplicationService {
                 ctx.getSoftScore(),
                 ctx.getMlProbability(),
                 ctx.getReasonCodes(),
-                ctx.evaluationTime()
+                ctx.evaluationTime(),
+                ctx.getModelMetadata()
         );
         RiskDecisionTraceEntity traceEntity = traceMapper.toEntity(trace,request);
         riskDecisionRepository.save(traceEntity);

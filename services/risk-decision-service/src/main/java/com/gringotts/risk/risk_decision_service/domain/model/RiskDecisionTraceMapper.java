@@ -19,7 +19,9 @@ public class RiskDecisionTraceMapper {
         entity.setMlProbability(trace.getMlProbability());
         entity.setReasonCodes(trace.getReasonCodes());
         entity.setEvaluatedAt(trace.getEvaluatedAt());
-
+        entity.setModelName(trace.getModelMetadata()!=null?trace.getModelMetadata().getModelName():"UNKNOWN");
+        entity.setModelVersion(trace.getModelMetadata()!=null?trace.getModelMetadata().getModelVersion():"UNKNOWN");
+        entity.setTrainedAt(trace.getModelMetadata()!=null?trace.getModelMetadata().getTrainedAt():"UNKNOWN");
         return entity;
     }
 }

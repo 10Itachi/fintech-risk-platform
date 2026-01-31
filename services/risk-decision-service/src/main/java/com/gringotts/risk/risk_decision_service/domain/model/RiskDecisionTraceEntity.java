@@ -42,6 +42,13 @@ public class RiskDecisionTraceEntity {
 
     private Instant evaluatedAt;
 
+    @Column
+    private String modelName;
+    @Column
+    private String modelVersion;
+    @Column
+    private String trainedAt;
+
     //public RiskDecisionTraceEntity(String string, TransactionStatus finalStatus, int softRiskScore, double mlProbability, List<String> reasonCodes, Instant evaluatedAt) {
     //}
 }

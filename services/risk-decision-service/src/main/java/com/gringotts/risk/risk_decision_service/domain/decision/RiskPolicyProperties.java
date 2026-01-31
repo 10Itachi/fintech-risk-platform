@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Set;
 
 @EnableConfigurationProperties(RiskPolicyProperties.class)
@@ -27,4 +28,8 @@ public class RiskPolicyProperties {
     // Soft rule thresholds
     private int softDeclineScore;      // e.g. 80
     private int softReviewScore;       // e.g. 40
+
+    //policies version
+    private String version;
+    private Instant activatedAt;
 }
