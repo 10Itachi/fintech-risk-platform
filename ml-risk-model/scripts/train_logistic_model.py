@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import pandas as pd
 import numpy as np
@@ -10,6 +11,13 @@ DATA_FILE = BASE_DIR / "artifacts" / "transactions.csv"
 MODEL_FILE = BASE_DIR / "artifacts" / "logistic_model.json"
 
 def train():
+
+    MODEL_NAME = "fraud_detection_logistic_regression"
+    BASE_VERSION = "1.1.0"
+    TIMESTAMP = datetime.now().strftime("%Y%m%d-%H%M%S")
+    
+    # Combined string: 1.1.0-20260130-182015
+    FULL_MODEL_VERSION = f"{BASE_VERSION}-{TIMESTAMP}"
     df = pd.read_csv(DATA_FILE)
 
     # 1. Feature Engineering
@@ -38,10 +46,16 @@ def train():
 
     # 5. Exporting Artifacts
     artifact = {
+        "metadata": {
+            "model_name": MODEL_NAME,
+            "model_version": FULL_MODEL_VERSION,
+            "trained_at": datetime.now().isoformat()
+        },
         "model_type": "logistic_regression",
         "intercept": float(model.intercept_[0]),
         "coefficients": {k: float(v) for k, v in zip(X.columns, model.coef_[0])},
         "scaler": {
+        
             "mean": {k: float(v) for k, v in zip(NUMERIC, scaler.mean_)},
             "std": {k: float(v) for k, v in zip(NUMERIC, scaler.scale_)}
         },
@@ -51,6 +65,8 @@ def train():
     with open(MODEL_FILE, "w") as f:
         json.dump(artifact, f, indent=4)
     print(f"Success! Model artifact saved to {MODEL_FILE}")
+    print(f"   Model:   {MODEL_NAME}")
+    print(f"   Version: {FULL_MODEL_VERSION}")
 
 if __name__ == "__main__":
     train()
