@@ -17,7 +17,10 @@ public class RiskDecisionResponse {
     private Integer riskScore;
     private List<String> reasonCode;
     private Double fraudProbability;
-
+    private String policyVersion;
+    private String modelName;
+    private String modelVersion;
+    private String trainedAt;
     public static RiskDecisionResponse reviewFallback() {
 
         return RiskDecisionResponse.builder()
@@ -25,6 +28,10 @@ public class RiskDecisionResponse {
                 .riskScore(null)
                 .reasonCode(List.of("RISK_SERVICE_UNAVAILABLE"))
                 .fraudProbability(null)
+                .policyVersion("RISK_POLICY_VERSION_NOT_AVAILABLE")
+                .modelName("MODEL_UNAVAILABLE")
+                .modelVersion("MODEL_UNAVAILABLE")
+                .trainedAt("MODEL_UNAVAILABLE")
                 .build();
     }
 
