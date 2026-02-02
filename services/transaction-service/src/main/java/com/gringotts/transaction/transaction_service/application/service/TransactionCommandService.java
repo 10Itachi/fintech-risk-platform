@@ -2,9 +2,11 @@ package com.gringotts.transaction.transaction_service.application.service;
 import com.gringotts.dto.RiskDecisionRequest;
 import com.gringotts.dto.RiskDecisionResponse;
 import com.gringotts.enums.TransactionStatus;
+import com.gringotts.kafkaevents.TransactionFinalizedEvent;
 import com.gringotts.transaction.transaction_service.api.dto.request.TransactionRequestDto;
 import com.gringotts.transaction.transaction_service.api.dto.response.TransactionResponseDto;
 import com.gringotts.transaction.transaction_service.application.mapper.RiskRequestMapper;
+import com.gringotts.transaction.transaction_service.application.mapper.TransactionEventMapper;
 import com.gringotts.transaction.transaction_service.application.mapper.TransactionMapper;
 import com.gringotts.transaction.transaction_service.domain.model.Transaction;
 import com.gringotts.transaction.transaction_service.domain.policy.TransactionStateMachine;
@@ -28,12 +30,15 @@ public class TransactionCommandService {
     private final RiskRequestMapper riskRequestMapper;
     private final RiskOrchestrationService riskOrchestrationService;
     private final TransactionRiskFeatureService riskFeatureService;
-    public TransactionCommandService(TransactionMapper transactionMapper, TransactionRepository transactionRepository, RiskRequestMapper riskRequestMapper, RiskOrchestrationService riskOrchestrationService, TransactionRiskFeatureService riskFeatureService) {
+    private final TransactionEventMapper transactionEventMapper;
+    public TransactionCommandService(TransactionMapper transactionMapper, TransactionRepository transactionRepository, RiskRequestMapper riskRequestMapper, RiskOrchestrationService riskOrchestrationService, TransactionRiskFeatureService riskFeatureService, TransactionEventMapper transactionEventMapper) {
         this.transactionMapper = transactionMapper;
         this.transactionRepository = transactionRepository;
         this.riskRequestMapper = riskRequestMapper;
         this.riskOrchestrationService = riskOrchestrationService;
         this.riskFeatureService = riskFeatureService;
+
+        this.transactionEventMapper = transactionEventMapper;
     }
 
     @Transactional
@@ -64,6 +69,8 @@ public class TransactionCommandService {
         LOGGER.info("******-Transaction saved after the risk analysis: "
                 +"\n"+transaction.getTransactionId()
                 +"\n"+transaction.getTransactionStatus());
+        TransactionFinalizedEvent event = transactionEventMapper.toEvent(transaction,riskDecisionResponse);
+        LOGGER.info("******-even out of transaction service method");
         return transactionMapper.toDto(transaction);
     }
 

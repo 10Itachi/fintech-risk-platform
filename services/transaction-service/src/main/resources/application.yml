@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 0
 
 spring:
   application:
@@ -23,6 +23,27 @@ spring:
         format_sql: true
         # Cleaned up the dialect property (Spring Boot 3 uses MySQLDialect for 8+)
         dialect: org.hibernate.dialect.MySQLDialect
+  kafka:
+    bootstrap-servers:
+      - localhost:19092
+      - localhost:19094
+      - localhost:19096
+
+    #producer:
+      #key to bytes and values to JSON Kafka understands
+      #key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      #value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      #acks: all #confirms they received the event
+      #retries: 10 # attempts 10
+      #retry.backoff.ms: 1000  #10 attmpts with one sce interval
+
+      #properties:
+        #enable.idempotence: true # no duplicate message even during retries
+        #max.in.flight.requests.per.connection: 5 #Required when idempotence is enabled,Limits how many messages can be “in the air” at once.Prevents message reordering during retries
+        #linger.ms: 5 #Waits up to 5 ms to batch messages together.mproves throughput Minimal latency impact Common in high-volume systems
+        #request.timeout.ms: 30000 #How long the producer waits for Kafka to respond.
+        #delivery.timeout.ms: 120000 #Maximum total time Kafka will try to deliver a message (including retries). prevent endless . retry loop
+        #spring.json.type.mapping: transactionFinalized:com.kafka.event_contracts.TransactionFinalizedEvent
 
 risk:
   service:

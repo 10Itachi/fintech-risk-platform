@@ -49,3 +49,9 @@ venv/
 # ======================
 tmp/
 
+# ======================
+# Kafka runtime data (NEVER commit)
+# ======================
+Infra/KafkaDockerCompose/volumes/
+
+
