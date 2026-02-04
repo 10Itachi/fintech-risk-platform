@@ -28,6 +28,7 @@ spring:
 
     topics:
       transaction-finalized: transaction.finalized.v1
+      transaction-finalized-dlt: transaction.finalized.v1-dlt
 
     bootstrap-servers:
       - localhost:19092

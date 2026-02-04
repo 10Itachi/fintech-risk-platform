@@ -10,8 +10,7 @@ import java.util.UUID;
 
 @Entity
 @Table(
-        name = "transaction_event_ledger",
-        uniqueConstraints = @UniqueConstraint(columnNames = "event_id")
+        name = "transaction_event_ledger"
 )
 @Builder(toBuilder = true)
 @NoArgsConstructor
@@ -25,13 +24,13 @@ public class TransactionEventLedgerEntity {
     /**
      * Unique identifier of THIS event (idempotency at event level)
      */
-    @Column(name = "event_id", nullable = false, updatable = false)
+    @Column(name = "event_id", nullable = false, updatable = false,unique = true)
     private UUID eventId;
 
     /**
      * Business reference (for search & reconciliation)
      */
-    @Column(name = "transaction_id", nullable = false, updatable = false)
+    @Column(name = "transaction_id", nullable = false, updatable = false, unique = true)
     private UUID transactionId;
 
     /**
