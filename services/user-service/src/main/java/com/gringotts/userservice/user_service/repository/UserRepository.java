@@ -18,14 +18,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByUserIdAndIsActive(Long userId, IsActive isActive);
-
-    Optional<User> findByUserNameAndIsActive(String userName, IsActive isActive);
-
-    Optional<User> findByUserName(String userName);
-
-    Optional<User> findByEmail(String email);
-
-    Optional<User> findByPhoneNumber(String phoneNumber);
-
+    Optional<User> findByKeycloakUserIdAndIsActive(String keycloakUserId, IsActive isActive);
     List<User> findByUserIdGreaterThanOrderByUserIdAsc(Long lastId, Pageable pageable);
+    Optional<User> findByUserNameAndIsActive(String username, IsActive isActive);
 }

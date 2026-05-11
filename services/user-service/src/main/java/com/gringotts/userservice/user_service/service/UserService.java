@@ -4,6 +4,7 @@ import com.gringotts.userservice.user_service.dto.UserRequestDto;
 import com.gringotts.userservice.user_service.dto.UserResponseDto;
 import com.gringotts.userservice.user_service.entity.User;
 import com.gringotts.userservice.user_service.enums.IsActive;
+import com.gringotts.userservice.user_service.exception.IdentityProviderException;
 import com.gringotts.userservice.user_service.exception.UserAlreadyExistsException;
 import com.gringotts.userservice.user_service.exception.UserNotFound;
 import com.gringotts.userservice.user_service.exception.UserServiceException;
@@ -38,15 +39,19 @@ public class UserService {
     private final UserMapper userMapper;
     private final UserMetrics userMetrics;
     private final CacheManager cacheManager;
-    public UserService(IdentityProviderService identityProviderService, UserRepository userRepository, UserMapper userMapper, UserMetrics userMetrics, CacheManager cacheManager) {
+
+    public UserService(IdentityProviderService identityProviderService,
+                       UserRepository userRepository,
+                       UserMapper userMapper,
+                       UserMetrics userMetrics,
+                       CacheManager cacheManager) {
         this.identityProviderService = identityProviderService;
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.userMetrics = userMetrics;
         this.cacheManager = cacheManager;
     }
-
-
+    // ================= CREATE USER =================
     @Transactional
     public UserResponseDto createUser(UserRequestDto request) {
 
@@ -56,91 +61,108 @@ public class UserService {
         String keycloakUserId = null;
 
         try {
-            // 1. Create user in Keycloak
+            // Create (or fetch) user in Keycloak (IDEMPOTENT)
             keycloakUserId = identityProviderService.createUser(request);
-            log.info("Keycloak user created kcUserId={}", keycloakUserId);
 
-            // 2. Map to entity
+            log.info("Keycloak user resolved kcUserId={}", keycloakUserId);
+
+            // Save in DB (SOURCE OF TRUTH)
             User user = userMapper.toEntity(request, keycloakUserId);
             user.setIsActive(IsActive.ACTIVE);
             user.setCreatedAt(LocalDateTime.now());
 
-            // 3. Save (DB handles uniqueness)
             User savedUser = userRepository.save(user);
 
-            log.info("User created successfully. DB ID: {}, Keycloak ID: {}",
+            log.info("User persisted DB ID={} KC ID={}",
                     savedUser.getUserId(), keycloakUserId);
 
             userMetrics.incrementSuccess();
-
             return userMapper.toDto(savedUser);
 
-        } catch (DataAccessException ex) {
+        }
 
-            log.error("DB constraint violation or DB failure. Rolling back Keycloak user: {}",
-                    keycloakUserId, ex);
+        // ================= KEYCLOAK FAILURE =================
+        catch (IdentityProviderException ex) {
+
+            log.error("Keycloak failure username={}", request.getUserName(), ex);
 
             userMetrics.incrementFailure();
-            rollbackKeycloakUser(keycloakUserId);
 
-            //  IMPORTANT: detect duplicate properly
-            if (ex.getMessage().contains("uk_users_username")) {
-                throw new UserAlreadyExistsException("Username already exists");
-            } else if (ex.getMessage().contains("uk_users_email")) {
-                throw new UserAlreadyExistsException("Email already exists");
-            } else if (ex.getMessage().contains("uk_users_phone")) {
-                throw new UserAlreadyExistsException("Phone number already exists");
+            // rollback only if user was created
+            if (keycloakUserId != null) {
+                safeRollback(keycloakUserId);
             }
+            throw ex;
+        }
 
-            throw new UserServiceException("User creation failed due to database error");
+        // ================= DB FAILURE =================
+        catch (DataAccessException ex) {
 
-        } catch (RuntimeException ex) {
-
-            log.error("User creation failed for username: {}", request.getUserName(), ex);
+            log.error("DB failure. Rolling back Keycloak user={}", keycloakUserId, ex);
 
             userMetrics.incrementFailure();
-            rollbackKeycloakUser(keycloakUserId);
+            safeRollback(keycloakUserId);
 
-            throw new UserServiceException("User creation failed");
+            // rely on DB constraint instead of string parsing ideally
+            if (isDuplicateError(ex)) {
+                throw new UserAlreadyExistsException("User with same email/phone/username already exists");
+            }
+            throw new UserServiceException("Database error during user creation");
+        }
+
+        // ================= UNKNOWN FAILURE =================
+        catch (Exception ex) {
+
+            log.error("Unexpected failure username={}", request.getUserName(), ex);
+
+            userMetrics.incrementFailure();
+            safeRollback(keycloakUserId);
+
+            throw new UserServiceException("Unexpected error during user creation");
         }
     }
 
-    // 🔥 Compensation logic isolated
-    private void rollbackKeycloakUser(String keycloakUserId) {
+    // ================= ROLLBACK =================
+
+    private void safeRollback(String keycloakUserId) {
 
         if (keycloakUserId == null) return;
+        try {
+            identityProviderService.deleteUser(keycloakUserId);
+            log.warn("Rollback successful kcUserId={}", keycloakUserId);
 
-        for (int attempt = 1; attempt <= 3; attempt++) {
-            try {
-                log.warn("Rollback attempt {} for kcUserId={}", attempt, keycloakUserId);
-
-                identityProviderService.deleteUser(keycloakUserId);
-
-                log.info("Rollback successful kcUserId={}", keycloakUserId);
-                return;
-
-            } catch (Exception ex) {
-                log.error("Rollback attempt {} failed kcUserId={}", attempt, keycloakUserId, ex);
-
-                try {
-                    Thread.sleep(500L * attempt); // basic backoff
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
-            }
+        } catch (Exception ex) {
+            log.error("CRITICAL: Rollback failed kcUserId={}", keycloakUserId, ex);
         }
-
-        log.error("CRITICAL: Failed to rollback Keycloak user kcUserId={}", keycloakUserId);
     }
 
-    @Cacheable(value = "userByUsername", key = "#username")
-    public UserResponseDto  getUserByUsername(String username) {
-        log.info("DB HIT → fetching username={}", username);
-        User user = userRepository
-                .findByUserNameAndIsActive(username, IsActive.ACTIVE)
-                .orElseThrow(() -> new UserNotFound("User not found"));
+    // ================= DUPLICATE CHECK =================
 
+    private boolean isDuplicateError(DataAccessException ex) {
+
+        // check BOTH root cause and main exception
+        String message = null;
+
+        if (ex.getRootCause() != null && ex.getRootCause().getMessage() != null) {
+            message = ex.getRootCause().getMessage().toLowerCase();
+        } else if (ex.getMessage() != null) {
+            message = ex.getMessage().toLowerCase();
+        }
+
+        if (message == null) return false;
+
+        return message.contains("duplicate") ||
+                message.contains("email") ||
+                message.contains("phone") ||
+                message.contains("username");
+    }
+
+    // ================= READ APIs =================
+
+    @Cacheable(value = "userByKeycloakId", key = "#keycloakId")
+    public UserResponseDto getUserByKeycloakId(String keycloakId) {
+        User user = userRepository.findByKeycloakUserIdAndIsActive(keycloakId, IsActive.ACTIVE)
+                .orElseThrow(() -> new UserNotFound("User not found"));
         return userMapper.toDto(user);
     }
 
@@ -153,15 +175,19 @@ public class UserService {
                 .toList();
     }
 
-    @Cacheable(value = "userById",key = "#userId")
+    @Cacheable(value = "userById", key = "#userId", unless = "#result == null")
     public UserResponseDto getUserById(Long userId) {
+
         log.info("DB HIT → fetching userId={}", userId);
+
         User user = userRepository
                 .findByUserIdAndIsActive(userId, IsActive.ACTIVE)
                 .orElseThrow(() -> new UserNotFound("User not found"));
 
         return userMapper.toDto(user);
     }
+
+    // ================= STATUS =================
 
     @Transactional
     public void deactivateUser(Long userId) {
@@ -174,9 +200,8 @@ public class UserService {
         user.setIsActive(IsActive.INACTIVE);
 
         identityProviderService.disableUser(user.getKeycloakUserId());
-        // 🔥 Manual eviction (clean & reliable)
-        cacheManager.getCache("userById").evict(userId);
-        cacheManager.getCache("userByUsername").evict(user.getUserName());
+
+        cacheEvict(user);
     }
 
     @Transactional
@@ -190,7 +215,12 @@ public class UserService {
         user.setIsActive(IsActive.ACTIVE);
 
         identityProviderService.enableUser(user.getKeycloakUserId());
-        cacheManager.getCache("userById").evict(userId);
+
+        cacheEvict(user);
+    }
+
+    private void cacheEvict(User user) {
+        cacheManager.getCache("userById").evict(user.getUserId());
         cacheManager.getCache("userByUsername").evict(user.getUserName());
     }
 }

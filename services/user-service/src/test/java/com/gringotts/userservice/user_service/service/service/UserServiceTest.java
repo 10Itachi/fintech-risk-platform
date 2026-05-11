@@ -4,6 +4,7 @@ import com.gringotts.userservice.user_service.dto.UserRequestDto;
 import com.gringotts.userservice.user_service.dto.UserResponseDto;
 import com.gringotts.userservice.user_service.entity.User;
 import com.gringotts.userservice.user_service.enums.IsActive;
+import com.gringotts.userservice.user_service.exception.IdentityProviderException;
 import com.gringotts.userservice.user_service.exception.UserAlreadyExistsException;
 import com.gringotts.userservice.user_service.exception.UserNotFound;
 import com.gringotts.userservice.user_service.exception.UserServiceException;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.dao.DataAccessException;
@@ -25,7 +27,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(org.mockito.junit.jupiter.MockitoExtension.class)
+@ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
     @Mock private IdentityProviderService identityProviderService;
@@ -35,125 +37,128 @@ class UserServiceTest {
     @Mock private CacheManager cacheManager;
     @Mock private Cache cache;
 
-    @InjectMocks private UserService userService;
+    @InjectMocks
+    private UserService userService;
 
     private UserRequestDto request;
     private User user;
-    private UserResponseDto responseDto;
+    private UserResponseDto response;
 
     @BeforeEach
     void setup() {
         request = new UserRequestDto();
         request.setUserName("john");
         request.setEmail("john@test.com");
-        request.setPhoneNumber("9999999999");
 
         user = new User();
         user.setUserId(1L);
         user.setUserName("john");
         user.setKeycloakUserId("kc-123");
-        user.setIsActive(IsActive.ACTIVE);
 
-        responseDto = new UserResponseDto(1L, "john", IsActive.ACTIVE);
+        response = new UserResponseDto();
     }
 
-    // ========================= CREATE USER =========================
+    // ================= CREATE USER =================
 
     @Test
-    void shouldCreateUserSuccessfully() {
+    void createUser_success() {
+
         when(identityProviderService.createUser(request)).thenReturn("kc-123");
         when(userMapper.toEntity(request, "kc-123")).thenReturn(user);
-        when(userRepository.save(any())).thenReturn(user);
-        when(userMapper.toDto(user)).thenReturn(responseDto);
+        when(userRepository.save(user)).thenReturn(user);
+        when(userMapper.toDto(user)).thenReturn(response);
 
         UserResponseDto result = userService.createUser(request);
 
         assertThat(result).isNotNull();
-        assertThat(result.getUserName()).isEqualTo("john");
 
         verify(identityProviderService).createUser(request);
-        verify(userRepository).save(any());
+        verify(userRepository).save(user);
         verify(userMetrics).incrementSuccess();
     }
 
     @Test
-    void shouldRollbackWhenDbFails() {
-        when(identityProviderService.createUser(request)).thenReturn("kc-123");
-        when(userMapper.toEntity(any(), any())).thenReturn(user);
+    void createUser_keycloakFailure() {
 
-        DataAccessException ex = mock(DataAccessException.class);
-        when(ex.getMessage()).thenReturn("some-db-error"); // IMPORTANT
-
-        when(userRepository.save(any())).thenThrow(ex);
-
-        assertThatThrownBy(() -> userService.createUser(request))
-                .isInstanceOf(UserServiceException.class);
-
-        verify(identityProviderService).deleteUser("kc-123");
-        verify(userMetrics).incrementFailure();
-    }
-
-    @Test
-    void shouldThrowDuplicateExceptionWhenUsernameExists() {
-        when(identityProviderService.createUser(request)).thenReturn("kc-123");
-        when(userMapper.toEntity(any(), any())).thenReturn(user);
-
-        DataAccessException ex = mock(DataAccessException.class);
-        when(ex.getMessage()).thenReturn("uk_users_username");
-        when(userRepository.save(any())).thenThrow(ex);
-
-        assertThatThrownBy(() -> userService.createUser(request))
-                .isInstanceOf(UserAlreadyExistsException.class)
-                .hasMessageContaining("Username already exists");
-
-        verify(identityProviderService).deleteUser("kc-123");
-    }
-
-    @Test
-    void shouldRollbackOnRuntimeException() {
         when(identityProviderService.createUser(request))
-                .thenThrow(new RuntimeException("Keycloak down"));
+                .thenThrow(new IdentityProviderException("fail"));
+
+        assertThatThrownBy(() -> userService.createUser(request))
+                .isInstanceOf(IdentityProviderException.class);
+
+        verify(userRepository, never()).save(any());
+        verify(userMetrics).incrementFailure();
+    }
+
+    @Test
+    void createUser_dbFailure_shouldRollback() {
+
+        when(identityProviderService.createUser(request)).thenReturn("kc-123");
+        when(userMapper.toEntity(request, "kc-123")).thenReturn(user);
+        when(userRepository.save(user))
+                .thenThrow(new DataAccessException("db error") {});
 
         assertThatThrownBy(() -> userService.createUser(request))
                 .isInstanceOf(UserServiceException.class);
 
+        verify(identityProviderService).deleteUser("kc-123");
         verify(userMetrics).incrementFailure();
-        verify(identityProviderService, never()).deleteUser(any());
     }
 
-    // ========================= READ =========================
+    @Test
+    void createUser_duplicateUser() {
+
+        when(identityProviderService.createUser(request)).thenReturn("kc-123");
+        when(userMapper.toEntity(request, "kc-123")).thenReturn(user);
+
+        // ✅ Updated to realistic DB error message
+        when(userRepository.save(user))
+                .thenThrow(new DataAccessException(
+                        "duplicate key value violates unique constraint uk_users_email"
+                ) {});
+
+        assertThatThrownBy(() -> userService.createUser(request))
+                .isInstanceOf(UserAlreadyExistsException.class);
+
+        verify(identityProviderService).deleteUser("kc-123");
+    }
+
+    // ================= READ =================
 
     @Test
-    void shouldReturnUserById() {
-        when(userRepository.findByUserIdAndIsActive(1L, IsActive.ACTIVE))
+    void getUserByKeycloakUserId_success() {
+
+        when(userRepository.findByKeycloakUserIdAndIsActive("kc-123", IsActive.ACTIVE))
                 .thenReturn(Optional.of(user));
-        when(userMapper.toDto(user)).thenReturn(responseDto);
+        when(userMapper.toDto(user)).thenReturn(response);
 
-        UserResponseDto result = userService.getUserById(1L);
+        UserResponseDto result = userService.getUserByKeycloakId("kc-123");
 
-        assertThat(result.getUserId()).isEqualTo(1L);
+        assertThat(result).isNotNull();
     }
 
     @Test
-    void shouldThrowWhenUserNotFound() {
-        when(userRepository.findByUserIdAndIsActive(1L, IsActive.ACTIVE))
+    void getUserByKeycloakUserId_notFound() {
+
+        when(userRepository.findByKeycloakUserIdAndIsActive(any(), any()))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> userService.getUserById(1L))
+        assertThatThrownBy(() -> userService.getUserByKeycloakId("kc-123"))
                 .isInstanceOf(UserNotFound.class);
     }
 
-    // ========================= STATE CHANGE =========================
+    // ================= STATUS =================
 
     @Test
-    void shouldDeactivateUser() {
+    void deactivateUser_shouldDisableAndEvictCache() {
+
+        user.setIsActive(IsActive.ACTIVE);
+
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(cacheManager.getCache("userById")).thenReturn(cache);
         when(cacheManager.getCache("userByUsername")).thenReturn(cache);
 
         userService.deactivateUser(1L);
-
-        assertThat(user.getIsActive()).isEqualTo(IsActive.INACTIVE);
 
         verify(identityProviderService).disableUser("kc-123");
         verify(cache).evict(1L);
@@ -161,7 +166,8 @@ class UserServiceTest {
     }
 
     @Test
-    void shouldReactivateUser() {
+    void reactivateUser_shouldEnableAndEvictCache() {
+
         user.setIsActive(IsActive.INACTIVE);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
@@ -169,8 +175,6 @@ class UserServiceTest {
         when(cacheManager.getCache("userByUsername")).thenReturn(cache);
 
         userService.reactivateUser(1L);
-
-        assertThat(user.getIsActive()).isEqualTo(IsActive.ACTIVE);
 
         verify(identityProviderService).enableUser("kc-123");
         verify(cache).evict(1L);

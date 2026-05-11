@@ -8,12 +8,12 @@ import org.springframework.http.HttpStatus;
 import java.time.LocalDateTime;
 
 @Getter
-@Builder
 @AllArgsConstructor
 public class ApiErrorDto {
 
-    private HttpStatus status;
-    private String message;
-    private Object details;        // 🔥 for validation errors / extra info
-    private LocalDateTime timestamp; // 🔥 for tracing
+    private final int status;          // HTTP status code (e.g. 409)
+    private final String error;        // MACHINE READABLE (e.g. USER_ALREADY_EXISTS)
+    private final String message;      // HUMAN READABLE (e.g. Username already exists)
+    private final Object details;      // Optional (validation errors, etc.)
+    private final LocalDateTime timestamp;
 }

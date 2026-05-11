@@ -18,7 +18,6 @@ public class UserMetrics {
     public void incrementSuccess() {
         success.increment();
     }
-
     public void incrementFailure() {
         failure.increment();
     }

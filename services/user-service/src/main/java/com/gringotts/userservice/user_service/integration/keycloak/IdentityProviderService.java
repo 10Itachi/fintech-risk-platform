@@ -29,4 +29,5 @@ public interface IdentityProviderService {
     void enableUser(String userId);
 
     void disableUser(String userId);
+
 }

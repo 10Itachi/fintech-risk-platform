@@ -46,10 +46,10 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/actuator/health",
                                 "/actuator/**").permitAll()
-                        .requestMatchers("/actuator/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/users").hasRole("ADMIN")
                         // All endpoints require authentication
+                        .requestMatchers("/api/v1/users/getUserById/**").authenticated()
                         .anyRequest().authenticated()
                 )
 

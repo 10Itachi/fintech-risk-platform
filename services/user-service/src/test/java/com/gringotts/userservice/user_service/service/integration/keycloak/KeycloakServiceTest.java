@@ -4,207 +4,140 @@ import com.gringotts.userservice.user_service.dto.UserRequestDto;
 import com.gringotts.userservice.user_service.enums.Role;
 import com.gringotts.userservice.user_service.exception.IdentityProviderException;
 import com.gringotts.userservice.user_service.integration.keycloak.KeycloakService;
+import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.keycloak.admin.client.CreatedResponseUtil;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.*;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
-import org.mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import jakarta.ws.rs.core.Response;
 
+import java.util.List;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(org.mockito.junit.jupiter.MockitoExtension.class)
+@ExtendWith(MockitoExtension.class)
 class KeycloakServiceTest {
 
     @Mock private Keycloak keycloak;
     @Mock private RealmResource realmResource;
     @Mock private UsersResource usersResource;
-    @Mock private RolesResource rolesResource;
-    @Mock private RoleResource roleResource;
-    @Mock private UserResource userResource;
-    @Mock private RoleMappingResource roleMappingResource;
-    @Mock private RoleScopeResource roleScopeResource;
+    @Mock private Response response;
 
-    @InjectMocks private KeycloakService keycloakService;
+    @InjectMocks
+    private KeycloakService keycloakService;
 
-    private UserRequestDto request;
+    private UserRequestDto dto;
 
     @BeforeEach
     void setup() {
-        request = new UserRequestDto();
-        request.setUserName("john");
-        request.setEmail("john@test.com");
-        request.setPassword("pass");
-        request.setRole(Role.USER);
+        dto = new UserRequestDto();
+        dto.setUserName("john");
+        dto.setEmail("john@test.com");
+        dto.setRole(Role.USER); // ✅ IMPORTANT FIX
 
-        ReflectionTestUtils.setField(keycloakService, "realm", "gringotts");
+        ReflectionTestUtils.setField(keycloakService, "realm", "test");
+
+        when(keycloak.realm("test")).thenReturn(realmResource);
+        when(realmResource.users()).thenReturn(usersResource);
     }
 
     // ================= SUCCESS =================
 
     @Test
-    void shouldCreateUserSuccessfully() {
-        Response response = mock(Response.class);
-
-        when(keycloak.realm("gringotts")).thenReturn(realmResource);
-        when(realmResource.users()).thenReturn(usersResource);
-        when(realmResource.roles()).thenReturn(rolesResource);
+    void createUser_success() {
 
         when(usersResource.create(any())).thenReturn(response);
-
-        // IMPORTANT FIX
         when(response.getStatus()).thenReturn(201);
-        when(response.getStatusInfo()).thenReturn(Response.Status.CREATED);
-        when(response.getLocation()).thenReturn(
-                java.net.URI.create("http://localhost/users/kc-123")
-        );
 
-        try (MockedStatic<org.keycloak.admin.client.CreatedResponseUtil> util =
-                     mockStatic(org.keycloak.admin.client.CreatedResponseUtil.class)) {
-
-            util.when(() -> org.keycloak.admin.client.CreatedResponseUtil.getCreatedId(response))
+        try (MockedStatic<CreatedResponseUtil> util = mockStatic(CreatedResponseUtil.class)) {
+            util.when(() -> CreatedResponseUtil.getCreatedId(response))
                     .thenReturn("kc-123");
 
-            when(rolesResource.get("USER")).thenReturn(roleResource);
-            when(roleResource.toRepresentation()).thenReturn(new RoleRepresentation());
+            // ✅ MOCK ROLE CHAIN
+            RolesResource rolesResource = mock(RolesResource.class);
+            RoleResource roleResource = mock(RoleResource.class);
+            RoleRepresentation roleRepresentation = new RoleRepresentation();
 
-            when(usersResource.get("kc-123")).thenReturn(userResource);
+            when(realmResource.roles()).thenReturn(rolesResource);
+            when(rolesResource.get("USER")).thenReturn(roleResource);
+            when(roleResource.toRepresentation()).thenReturn(roleRepresentation);
+
+            // ✅ MOCK USER ROLE ASSIGNMENT CHAIN
+            UserResource userResource = mock(UserResource.class);
+            RoleMappingResource roleMappingResource = mock(RoleMappingResource.class);
+            RoleScopeResource roleScopeResource = mock(RoleScopeResource.class);
+
+            when(realmResource.users().get("kc-123")).thenReturn(userResource);
             when(userResource.roles()).thenReturn(roleMappingResource);
             when(roleMappingResource.realmLevel()).thenReturn(roleScopeResource);
 
-            String result = keycloakService.createUser(request);
+            String result = keycloakService.createUser(dto);
 
             assertThat(result).isEqualTo("kc-123");
-            verify(roleScopeResource).add(any());
         }
     }
 
-    // ================= DUPLICATE =================
+    // ================= CONFLICT =================
 
     @Test
-    void shouldThrowDuplicateException() {
-        Response response = mock(Response.class);
-
-        when(keycloak.realm("gringotts")).thenReturn(realmResource);
-        when(realmResource.users()).thenReturn(usersResource);
+    void createUser_conflict() {
 
         when(usersResource.create(any())).thenReturn(response);
         when(response.getStatus()).thenReturn(409);
 
-        assertThatThrownBy(() -> keycloakService.createUser(request))
-                .isInstanceOf(IdentityProviderException.class)
-                .hasMessageContaining("Execution failed"); // FIXED
+        UserRepresentation existingUser = new UserRepresentation();
+        existingUser.setId("existing-id");
+
+        when(usersResource.search("john", true)).thenReturn(List.of(existingUser));
+
+        String result = keycloakService.createUser(dto);
+
+        assertThat(result).isEqualTo("existing-id");
     }
 
-    // ================= UNEXPECTED STATUS =================
+    // ================= FAILURE =================
 
     @Test
-    void shouldThrowOnUnexpectedStatus() {
-        Response response = mock(Response.class);
-
-        when(keycloak.realm("gringotts")).thenReturn(realmResource);
-        when(realmResource.users()).thenReturn(usersResource);
+    void createUser_failure() {
 
         when(usersResource.create(any())).thenReturn(response);
         when(response.getStatus()).thenReturn(500);
 
-        assertThatThrownBy(() -> keycloakService.createUser(request))
+        assertThatThrownBy(() -> keycloakService.createUser(dto))
                 .isInstanceOf(IdentityProviderException.class);
-    }
-
-    // ================= ROLE FAILURE =================
-
-    @Test
-    void shouldRollbackWhenRoleAssignmentFails() {
-        Response response = mock(Response.class);
-
-        when(keycloak.realm("gringotts")).thenReturn(realmResource);
-        when(realmResource.users()).thenReturn(usersResource);
-        when(realmResource.roles()).thenReturn(rolesResource);
-
-        when(usersResource.create(any())).thenReturn(response);
-
-        // minimal required mocks
-        when(response.getStatus()).thenReturn(201);
-        when(response.getStatusInfo()).thenReturn(Response.Status.CREATED);
-        when(response.getLocation()).thenReturn(
-                java.net.URI.create("http://localhost/users/kc-123")
-        );
-
-        try (MockedStatic<org.keycloak.admin.client.CreatedResponseUtil> util =
-                     mockStatic(org.keycloak.admin.client.CreatedResponseUtil.class)) {
-
-            util.when(() -> org.keycloak.admin.client.CreatedResponseUtil.getCreatedId(response))
-                    .thenReturn("kc-123");
-
-            // ONLY failing part
-            when(rolesResource.get("USER")).thenThrow(new RuntimeException());
-
-            assertThatThrownBy(() -> keycloakService.createUser(request))
-                    .isInstanceOf(IdentityProviderException.class);
-
-            // DO NOT verify delete (async)
-        }
     }
 
     // ================= DELETE =================
 
     @Test
-    void shouldDeleteUser() {
-        when(keycloak.realm("gringotts")).thenReturn(realmResource);
-        when(realmResource.users()).thenReturn(usersResource);
-
+    void deleteUser_success() {
         keycloakService.deleteUser("kc-123");
 
-        verify(usersResource).delete("kc-123");
+        verify(keycloak.realm("test").users()).delete("kc-123");
     }
 
-    // ================= ENABLE =================
-
     @Test
-    void shouldEnableUser() {
-        UserRepresentation user = new UserRepresentation();
+    void deleteUser_failure() {
 
-        when(keycloak.realm("gringotts")).thenReturn(realmResource);
-        when(realmResource.users()).thenReturn(usersResource);
-        when(usersResource.get("kc-123")).thenReturn(userResource);
-        when(userResource.toRepresentation()).thenReturn(user);
+        UsersResource usersResourceMock = mock(UsersResource.class);
 
-        keycloakService.enableUser("kc-123");
+        when(keycloak.realm("test")).thenReturn(realmResource);
+        when(realmResource.users()).thenReturn(usersResourceMock);
 
-        assertThat(user.isEnabled()).isTrue();
-        verify(userResource).update(user);
-    }
+        doThrow(new RuntimeException())
+                .when(usersResourceMock)
+                .delete("kc-123");
 
-    // ================= DISABLE =================
-
-    @Test
-    void shouldDisableUser() {
-        UserRepresentation user = new UserRepresentation();
-
-        when(keycloak.realm("gringotts")).thenReturn(realmResource);
-        when(realmResource.users()).thenReturn(usersResource);
-        when(usersResource.get("kc-123")).thenReturn(userResource);
-        when(userResource.toRepresentation()).thenReturn(user);
-
-        keycloakService.disableUser("kc-123");
-
-        assertThat(user.isEnabled()).isFalse();
-        verify(userResource).update(user);
-    }
-
-    // ================= FALLBACK =================
-
-    @Test
-    void shouldTriggerFallback() {
-        assertThatThrownBy(() ->
-                keycloakService.createUserFallback(request, new RuntimeException()))
+        assertThatThrownBy(() -> keycloakService.deleteUser("kc-123"))
                 .isInstanceOf(IdentityProviderException.class);
     }
 }

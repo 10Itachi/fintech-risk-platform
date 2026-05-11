@@ -23,7 +23,7 @@ public class UserController {
 
     //  PUBLIC → Signup (no token required)
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping()
+    @PostMapping("/createUser")
     public ResponseEntity<UserResponseDto> createUser(
             @Valid @RequestBody UserRequestDto request) {
 
@@ -38,13 +38,13 @@ public class UserController {
     public ResponseEntity<UserResponseDto> getProfile(Authentication authentication) {
         String username = authentication.getName();
         return ResponseEntity.ok(
-                userService.getUserByUsername(username)
+                userService.getUserByKeycloakId(username)
         );
     }
 
     //  ADMIN → GET ALL USERS
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping
+    @GetMapping("/getUsers")
     public ResponseEntity<List<UserResponseDto>> getUsers(
             @RequestParam(defaultValue = "0") Long lastId,
             @RequestParam(defaultValue = "10") int size) {
@@ -53,8 +53,8 @@ public class UserController {
     }
 
     // ADMIN OR SELF → GET USER BY ID
-    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.subject")
-    @GetMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    @GetMapping("/getUserById/{userId}")
     public ResponseEntity<UserResponseDto> getUserById(@PathVariable Long userId) {
 
         return ResponseEntity.ok(userService.getUserById(userId));

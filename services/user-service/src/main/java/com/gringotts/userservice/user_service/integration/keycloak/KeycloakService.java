@@ -14,9 +14,10 @@ import org.keycloak.representations.idm.*;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.*;
 
 @Service
 @RequiredArgsConstructor
@@ -28,13 +29,9 @@ public class KeycloakService implements IdentityProviderService {
     @Value("${keycloak.realm}")
     private String realm;
 
-    private final ExecutorService executor = Executors.newFixedThreadPool(5);
-
-    // ================= CREATE USER =================
-
     @Override
     @Retry(name = "keycloakRetry")
-    @CircuitBreaker(name = "keycloakCB", fallbackMethod = "createUserFallback")
+    @CircuitBreaker(name = "keycloakCB")
     public String createUser(UserRequestDto dto) {
 
         String traceId = UUID.randomUUID().toString();
@@ -43,7 +40,11 @@ public class KeycloakService implements IdentityProviderService {
         log.info("Creating user in Keycloak username={}", dto.getUserName());
 
         try {
-            return executeWithTimeout(() -> doCreateUser(dto));
+            return doCreateUser(dto);
+        } catch (IdentityProviderException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IdentityProviderException("Keycloak communication failed", ex);
         } finally {
             MDC.clear();
         }
@@ -51,118 +52,94 @@ public class KeycloakService implements IdentityProviderService {
 
     private String doCreateUser(UserRequestDto dto) {
 
-        UsersResource usersResource = keycloak.realm(realm).users();
+        UsersResource users = keycloak.realm(realm).users();
         UserRepresentation user = buildUserRepresentation(dto);
 
-        try (Response response = usersResource.create(user)) {
+        Response response = null;
 
+        try {
+            response = users.create(user);
             int status = response.getStatus();
 
             if (status == 201) {
-
                 String userId = CreatedResponseUtil.getCreatedId(response);
 
-                try {
-                    assignRole(userId, dto.getRole());
-                } catch (Exception roleEx) {
+                assignRole(userId, dto.getRole());
 
-                    log.error("Role assignment failed, rolling back userId={}", userId, roleEx);
-                    safeDelete(userId);
-
-                    throw new IdentityProviderException("Role assignment failed");
-                }
-
-                log.info("User created successfully userId={}", userId);
+                log.info("User created in Keycloak userId={}", userId);
                 return userId;
-
-            } else if (status == 409) {
-
-                throw new IdentityProviderException("User already exists");
-
-            } else {
-                throw new IdentityProviderException("Unexpected response status=" + status);
             }
 
+            if (status == 409) {
+
+                log.info("User already exists in Keycloak username={}", dto.getUserName());
+
+                String existingUserId = findUserIdByUsername(dto.getUserName());
+
+                if (existingUserId == null) {
+                    throw new IdentityProviderException("User exists but unable to fetch userId");
+                }
+
+                return existingUserId;
+            }
+
+            throw new IdentityProviderException("Unexpected Keycloak response: " + status);
+
+        } catch (IdentityProviderException ex) {
+            throw ex;
         } catch (Exception ex) {
             throw new IdentityProviderException("Keycloak create failed", ex);
+        } finally {
+            if (response != null) response.close();
         }
     }
 
-    // ================= TIMEOUT WRAPPER =================
-
-    //<T> generic object , T Generic return type
-    private <T> T executeWithTimeout(Callable<T> task) {
-
-        Future<T> future = executor.submit(task);
-        //executor.submit(task): This takes your lambda (the instructions to create a user) and hands it to a separate thread.
-        // It returns a Future, which is like a "claim ticket" for a result that isn't ready yet.
-
+    private void assignRole(String userId, Enum<?> roleEnum) {
         try {
-            return future.get(3, TimeUnit.SECONDS); // 🔥 timeout
+            RoleRepresentation role = keycloak.realm(realm)
+                    .roles()
+                    .get(roleEnum.name())
+                    .toRepresentation();
 
-        } catch (TimeoutException ex) {
-            future.cancel(true);
-            log.error("Keycloak call timed out");
-            throw new IdentityProviderException("Keycloak timeout");
+            keycloak.realm(realm)
+                    .users()
+                    .get(userId)
+                    .roles()
+                    .realmLevel()
+                    .add(Collections.singletonList(role));
 
         } catch (Exception ex) {
-            throw new IdentityProviderException("Execution failed", ex);
+            log.error("Role assignment failed userId={}", userId, ex);
+            throw new IdentityProviderException("Role assignment failed", ex);
         }
     }
 
-    // ================= FALLBACK =================
+    private String findUserIdByUsername(String username) {
+        try {
+            List<UserRepresentation> users = keycloak.realm(realm)
+                    .users()
+                    .search(username, true);
 
-    public String createUserFallback(UserRequestDto dto, Throwable ex) {
+            if (users == null || users.isEmpty()) return null;
 
-        log.error("Fallback triggered for Keycloak createUser username={}", dto.getUserName(), ex);
+            return users.get(0).getId();
 
-        throw new IdentityProviderException("Identity provider unavailable, please try later");
+        } catch (Exception ex) {
+            throw new IdentityProviderException("Failed to fetch existing user", ex);
+        }
     }
-
-    // ================= DELETE =================
 
     @Override
     @Retry(name = "keycloakRetry")
     @CircuitBreaker(name = "keycloakCB")
     public void deleteUser(String userId) {
-        safeDelete(userId);
-    }
-
-    private void safeDelete(String userId) {
-
         try {
-            executeWithTimeout(() -> {
-                keycloak.realm(realm).users().delete(userId);
-                log.info("Deleted user userId={}", userId);
-                return null;
-            });
-
+            keycloak.realm(realm).users().delete(userId);
+            log.info("Deleted Keycloak user userId={}", userId);
         } catch (Exception ex) {
-            log.error("Failed to delete user userId={}", userId, ex);
-            throw new IdentityProviderException("Delete failed", ex);
+            throw new IdentityProviderException("Delete user failed", ex);
         }
     }
-
-    // ================= ROLE =================
-
-    private void assignRole(String userId, Enum<?> roleEnum) {
-
-        RoleRepresentation role = keycloak.realm(realm)
-                .roles()
-                .get(roleEnum.name())
-                .toRepresentation();
-
-        keycloak.realm(realm)
-                .users()
-                .get(userId)
-                .roles()
-                .realmLevel()
-                .add(Collections.singletonList(role));
-
-        log.info("Assigned role {} to user {}", roleEnum.name(), userId);
-    }
-
-    // ================= STATUS =================
 
     @Override
     public void disableUser(String userId) {
@@ -175,30 +152,23 @@ public class KeycloakService implements IdentityProviderService {
     }
 
     private void updateUserStatus(String userId, boolean enabled) {
-
         try {
-            executeWithTimeout(() -> {
-                UserRepresentation user = keycloak.realm(realm)
-                        .users()
-                        .get(userId)
-                        .toRepresentation();
+            UserRepresentation user = keycloak.realm(realm)
+                    .users()
+                    .get(userId)
+                    .toRepresentation();
 
-                user.setEnabled(enabled);
+            user.setEnabled(enabled);
 
-                keycloak.realm(realm)
-                        .users()
-                        .get(userId)
-                        .update(user);
-
-                return null;
-            });
+            keycloak.realm(realm)
+                    .users()
+                    .get(userId)
+                    .update(user);
 
         } catch (Exception ex) {
             throw new IdentityProviderException("Update user status failed", ex);
         }
     }
-
-    // ================= BUILD USER =================
 
     private UserRepresentation buildUserRepresentation(UserRequestDto dto) {
 
