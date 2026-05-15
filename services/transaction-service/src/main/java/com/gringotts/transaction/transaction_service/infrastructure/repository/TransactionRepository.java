@@ -10,13 +10,14 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
-        Page<Transaction> findByUserId(Long userId, Pageable pageable);
+        Page<Transaction> findByUserId(UUID userId, Pageable pageable);
 
         @Query("""
                 SELECT COALESCE(SUM(t.amount), 0)
@@ -25,7 +26,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                 AND t.createdAt >= :windowStart
                 AND t.transactionStatus IN ('APPROVED','INITIATED')
                 """)
-        BigDecimal sumAmountLast24H(@Param ("userId")  Long userId,
+        BigDecimal sumAmountLast24H(@Param ("userId")  UUID userId,
                                     @Param("windowStart")Instant windowStart);
 
         @Query("""
@@ -35,7 +36,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                 AND t.createdAt >= :windowStart
                 AND t.transactionStatus IN ('APPROVED', 'INITIATED')
                 """)
-        Integer countTxnsLast24h(@Param ("userId")  Long userId,
+        Integer countTxnsLast24h(@Param ("userId")  UUID userId,
                              @Param("windowStart")Instant windowStart);
 
+    Optional<Transaction> findByIdempotencyKey(String idempotencyKey);
+
+    Optional<Object> findByTransactionIdAndUserId(UUID transactionId, UUID userId);
 }

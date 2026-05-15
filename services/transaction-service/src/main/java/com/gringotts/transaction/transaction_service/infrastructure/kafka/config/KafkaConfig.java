@@ -7,6 +7,7 @@ import org.springframework.kafka.config.TopicBuilder;
 
 import java.util.Map;
 
+// this class is used to create kafka topic and its partitions
 @Configuration
 public class KafkaConfig {
 
@@ -14,8 +15,8 @@ public class KafkaConfig {
     public NewTopic topicTransaction() {
         return  TopicBuilder.name("transaction.finalized.v1")
                 .partitions(3) // increase for through put
-                .replicas(3)
-                .configs(Map.of("min.insync.replicas","2"))
+                .replicas(3)  // one copy in each broker
+                .configs(Map.of("min.insync.replicas","2")) // min 2 replicas must acknowledge the write was successful
                 .build();
     }
 }

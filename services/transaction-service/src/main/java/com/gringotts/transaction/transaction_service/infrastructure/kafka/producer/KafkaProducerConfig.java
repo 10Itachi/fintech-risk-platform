@@ -15,41 +15,41 @@ import java.util.Map;
 
 @Configuration
 public class KafkaProducerConfig {
+
     @Bean
-    public ProducerFactory<String, Object> producerFactory(
-            KafkaProperties kafkaProperties
-    ) {
+    public ProducerFactory<String, String> producerFactory(KafkaProperties kafkaProperties) {
+
         Map<String, Object> props = new HashMap<>();
-        // ===== REQUIRED =====
-        props.put(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                kafkaProperties.getBootstrapServers()
-        );
 
-        // ===== RELIABILITY =====
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                kafkaProperties.getBootstrapServers());
+
+        // Reliability
         props.put(ProducerConfig.ACKS_CONFIG, "all");
-        props.put(ProducerConfig.RETRIES_CONFIG, 10);
-        props.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, 1000);
         props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        props.put(ProducerConfig.RETRIES_CONFIG, 2); //real 10
+        props.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, 100); // real 1000 i.e. 1 sec
+
+        // Safe ordering
         props.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 5);
+
+        // Performance
         props.put(ProducerConfig.LINGER_MS_CONFIG, 5);
-        props.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 30000);
-        props.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 120000);
 
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-                StringSerializer.class);
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-                JsonSerializer.class);
+        // Timeouts
+        props.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 2000); //30000 30 sec
+        props.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 8000); //1200000 120 sec
 
-        // 🚫 NO Java type metadata in Kafka
-        props.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
+        // SERIALIZERS (CRITICAL CHANGE)
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
 
         return new DefaultKafkaProducerFactory<>(props);
     }
 
     @Bean
-    public KafkaTemplate<String, Object> kafkaTemplate(
-            ProducerFactory<String, Object> producerFactory
+    public KafkaTemplate<String, String> kafkaTemplate(
+            ProducerFactory<String, String> producerFactory
     ) {
         return new KafkaTemplate<>(producerFactory);
     }
