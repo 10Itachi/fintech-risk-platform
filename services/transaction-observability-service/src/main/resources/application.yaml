@@ -1,0 +1,111 @@
+server:
+  port: ${SERVER_PORT}
+
+spring:
+  application:
+    name: ${SPRING_APPLICATION_NAME}
+
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+    hikari:
+      maximum-pool-size: ${HIKARI_MAXIMUM_POOL_SIZE}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${HIBERNATE_DDL_AUTO}
+
+    show-sql: ${HIBERNATE_SHOW_SQL}
+
+    properties:
+      hibernate:
+        format_sql: ${HIBERNATE_FORMAT_SQL}
+        dialect: ${HIBERNATE_DIALECT}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
+
+  kafka:
+
+    topics:
+      transaction-finalized: ${KAFKA_TRANSACTION_FINALIZED_TOPIC}
+      transaction-finalized-dlt: ${KAFKA_TRANSACTION_FINALIZED_DLT_TOPIC}
+
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP}
+      auto-offset-reset: ${KAFKA_AUTO_OFFSET_RESET}
+      enable-auto-commit: ${KAFKA_ENABLE_AUTO_COMMIT}
+      max-poll-records: ${KAFKA_MAX_POLL_RECORDS}
+      max-poll-interval-ms: ${KAFKA_MAX_POLL_INTERVAL_MS}
+
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.value.default.type: com.gringotts.kafkaevents.TransactionFinalizedEvent
+        spring.json.trusted.packages: com.gringotts.kafkaevents
+
+    listener:
+      concurrency: ${KAFKA_LISTENER_CONCURRENCY}
+      ack-mode: ${KAFKA_ACK_MODE}
+
+  output:
+    ansi:
+      enabled: ALWAYS
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+
+logging:
+
+  pattern:
+    console: >
+      %d{yyyy-MM-dd HH:mm:ss.SSS}
+      [%X{correlationId}]
+      %-5level
+      %logger{36}
+      - %msg%n
+
+  level:
+
+    # BUSINESS LOGS
+    com.gringotts: ${LOGGING_LEVEL_COM_GRINGOTTS}
+
+    # SPRING
+    org.springframework.boot: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_BOOT}
+    org.springframework.web: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB}
+    org.springframework.security: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY}
+
+    # HIBERNATE
+    org.hibernate.SQL: ${LOGGING_LEVEL_ORG_HIBERNATE_SQL}
+    org.hibernate.orm.jdbc.bind: ${LOGGING_LEVEL_ORG_HIBERNATE_BIND}
+    org.hibernate.orm.connections.pooling: ${LOGGING_LEVEL_ORG_HIBERNATE_POOLING}
+
+    # KAFKA
+    org.apache.kafka.clients.consumer.ConsumerConfig: ${LOGGING_LEVEL_KAFKA_CONSUMER_CONFIG}
+    org.apache.kafka.clients.Metadata: ${LOGGING_LEVEL_KAFKA_METADATA}
+    org.apache.kafka.clients.NetworkClient: ${LOGGING_LEVEL_KAFKA_NETWORK_CLIENT}
+    org.apache.kafka.clients.consumer.internals.ConsumerCoordinator: ${LOGGING_LEVEL_KAFKA_CONSUMER_COORDINATOR}
+    org.apache.kafka.clients.consumer.internals.ConsumerUtils: ${LOGGING_LEVEL_KAFKA_CONSUMER_UTILS}
+    org.apache.kafka.clients.consumer.internals.ConsumerRebalanceListenerInvoker: ${LOGGING_LEVEL_KAFKA_REBALANCE}
+
+    org.springframework.kafka: ${LOGGING_LEVEL_SPRING_KAFKA}
+
+    # TOMCAT
+    org.apache.catalina: ${LOGGING_LEVEL_APACHE_CATALINA}
+
+    # HIKARI
+    com.zaxxer.hikari: ${LOGGING_LEVEL_HIKARI}
