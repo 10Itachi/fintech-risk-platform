@@ -51,7 +51,11 @@ public class UserService {
         this.userMetrics = userMetrics;
         this.cacheManager = cacheManager;
     }
+
     // ================= CREATE USER =================
+
+    /*@Transactional is placed at UserService level because DB operations must rollback atomically.
+    Keycloak is an external HTTP system and cannot participate in Spring DB transactions.*/
     @Transactional
     public UserResponseDto createUser(UserRequestDto request) {
 
@@ -123,7 +127,6 @@ public class UserService {
     }
 
     // ================= ROLLBACK =================
-
     private void safeRollback(String keycloakUserId) {
 
         if (keycloakUserId == null) return;
@@ -137,7 +140,6 @@ public class UserService {
     }
 
     // ================= DUPLICATE CHECK =================
-
     private boolean isDuplicateError(DataAccessException ex) {
 
         // check BOTH root cause and main exception
@@ -188,7 +190,6 @@ public class UserService {
     }
 
     // ================= STATUS =================
-
     @Transactional
     public void deactivateUser(Long userId) {
 
