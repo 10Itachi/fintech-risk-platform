@@ -1,51 +1,104 @@
 server:
-  port: 8082
+  port: ${SERVER_PORT}
 
 spring:
   application:
-    name: risk-decision-service
+    name: ${SPRING_APPLICATION_NAME}
+
   datasource:
-    # 1. Added createDatabaseIfNotExist=true to handle the "Unknown Database" error
-    url: jdbc:mysql://localhost:3306/gbank_risk_assessments?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: root
-    password: Emma10watson*
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: ${DB_DRIVER}
 
   jpa:
-    # 2. Set to 'create' for the VERY FIRST run only.
-    # After you see your tables in MySQL, change this to 'update'.
     hibernate:
-      ddl-auto: create
-    show-sql: true
+      ddl-auto: ${JPA_DDL_AUTO}
+    show-sql: ${JPA_SHOW_SQL}
     properties:
       hibernate:
         format_sql: true
-        # Cleaned up the dialect property (Spring Boot 3 uses MySQLDialect for 8+)
-        dialect: org.hibernate.dialect.MySQLDialect
-security:
-  jwt:
-    enabled: true
-    secret: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    issuer: "transaction-service"
-    audience: "risk-decision-service"
+        dialect: ${HIBERNATE_DIALECT}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI}
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+
+    cache:
+      type: redis
+      redis:
+        time-to-live: ${CACHE_TTL}
+
+ml:
+  model:
+    path: ../../shared_model/active-model.json
 
 risk:
   policy:
-    version: "2026-01-30"
-    activated_at: "2026-01-30T18:45:00Z"
-    maxSingleAmount: 50000
-    maxDailyAmount: 100000
-    cardWithdrawalLimit: 50000
+    version: ${RISK_POLICY_VERSION}
+    activated_at: ${RISK_POLICY_ACTIVATED_AT}
+
+    maxSingleAmount: ${MAX_SINGLE_AMOUNT}
+    maxDailyAmount: ${MAX_DAILY_AMOUNT}
+    cardWithdrawalLimit: ${CARD_WITHDRAWAL_LIMIT}
 
     blockedCountries:
       - PK
       - BD
       - AF
 
-    maxFutureDrift: PT2M   # 2 minutes
-    maxPastDrift: PT5M     # 5 minutes
+    maxFutureDrift: PT2M
+    maxPastDrift: PT5M
 
-    declineThreshold: 0.80
-    reviewThreshold: 0.50
-    softDeclineScore: 80
-    softReviewScore: 40
+    declineThreshold: ${DECLINE_THRESHOLD}
+    reviewThreshold: ${REVIEW_THRESHOLD}
+
+    softRules:
+      highAmount: ${SOFT_HIGH_AMOUNT}
+      mediumAmount: ${SOFT_MEDIUM_AMOUNT}
+
+      velocityHigh: ${VELOCITY_HIGH}
+      velocityMedium: ${VELOCITY_MEDIUM}
+
+      cardHighAmount: ${CARD_HIGH_AMOUNT}
+
+      deltas:
+        low: ${DELTA_LOW}
+        medium: ${DELTA_MEDIUM}
+        high: ${DELTA_HIGH}
+        critical: ${DELTA_CRITICAL}
+
+resilience4j:
+  retry:
+    instances:
+      keycloakRetry:
+        max-attempts: 3
+        wait-duration: 500
+        exponential-backoff-multiplier: 2
+
+logging:
+  pattern:
+    console: ${LOG_PATTERN}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${USER_ACTUATOR_ENDPOINTS:health,metrics}
+  metrics:
+    tags:
+      application: risk-decision-service
+  endpoint:
+    health:
+      show-details: always

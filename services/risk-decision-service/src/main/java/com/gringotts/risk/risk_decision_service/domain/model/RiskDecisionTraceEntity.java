@@ -7,7 +7,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
 import java.time.Instant;
 import java.util.List;
 
@@ -16,23 +15,36 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "risk_decision_traces")
+@Table(
+        name = "risk_decision_trace",
+        indexes = {
+                @Index(name = "idx_evaluated_at", columnList = "evaluated_at")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_transaction_id", columnNames = "transaction_id")
+        }
+)
 public class RiskDecisionTraceEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "transaction_id", nullable = false)
     private String transactionId;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "final_status", nullable = false)
     private TransactionStatus finalStatus;
 
-    private Integer softRiskScore;
-
+    @Column(name = "ml_probability")
     private Double mlProbability;
 
-    @ElementCollection
+    /**
+     * Normalized storage for audit clarity.
+     * Can be optimized to JSON for ultra high throughput systems.
+     */
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
             name = "risk_decision_reason",
             joinColumns = @JoinColumn(name = "trace_id")
@@ -40,15 +52,18 @@ public class RiskDecisionTraceEntity {
     @Column(name = "reason_code")
     private List<String> reasonCodes;
 
+    @Column(name = "evaluated_at", nullable = false)
     private Instant evaluatedAt;
 
-    @Column
+    @Column(name = "model_name")
     private String modelName;
-    @Column
+
+    @Column(name = "model_version")
     private String modelVersion;
-    @Column
+
+    @Column(name = "trained_at")
     private String trainedAt;
 
-    //public RiskDecisionTraceEntity(String string, TransactionStatus finalStatus, int softRiskScore, double mlProbability, List<String> reasonCodes, Instant evaluatedAt) {
-    //}
+    @Column(name = "policy_version")
+    private String policyVersion;
 }
