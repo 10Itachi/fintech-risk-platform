@@ -1,4 +1,4 @@
-# Gringotts User Service
+# User Service
 
 ## Overview
 

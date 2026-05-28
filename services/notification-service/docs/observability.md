@@ -1,4 +1,3 @@
-# observability.md
 
 # Notification Service Observability Architecture
 

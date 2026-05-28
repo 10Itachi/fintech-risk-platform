@@ -1,4 +1,4 @@
-# api-spec.md
+# Risk decision service API doc
 
 # API Specification
 

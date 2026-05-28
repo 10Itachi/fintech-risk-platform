@@ -1,4 +1,3 @@
-# observability.md
 
 # Transaction Observability Service — Observability Architecture
 

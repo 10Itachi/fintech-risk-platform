@@ -1,4 +1,3 @@
-# README.md
 
 # Notification Service
 

@@ -1,4 +1,3 @@
-# observability.md
 
 # Observability Architecture
 

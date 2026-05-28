@@ -1,5 +1,3 @@
-# README.md
-
 # Transaction Observability Service
 
 # Overview

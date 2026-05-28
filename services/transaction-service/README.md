@@ -1,5 +1,5 @@
-````md
-# Transaction Processing & Fraud Detection Platform
+
+# Transaction Processing service
 
 # Overview
 
