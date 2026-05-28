@@ -20,7 +20,7 @@ import java.util.UUID;
 
 @Slf4j
 @RestController
-@RequestMapping("/transactions")
+@RequestMapping("/api/v1/transactions")
 public class TransactionController {
 
    private final TransactionOrchestratorService orchestratorService;
@@ -37,7 +37,7 @@ public class TransactionController {
     // =========================
 
     @PreAuthorize("hasRole('USER')")
-    @PostMapping
+    @PostMapping("/user/create")
     public ResponseEntity<TransactionResponseDto> createTransaction(
             @Valid @RequestBody TransactionRequestDto request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey
@@ -60,7 +60,7 @@ public class TransactionController {
     // =========================
 
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    @GetMapping("/{transactionId}")
+    @GetMapping("/shared/{transactionId}")
     public ResponseEntity<TransactionResponseDto> getTransactionById(
             @PathVariable UUID transactionId
     ) {
@@ -81,7 +81,7 @@ public class TransactionController {
     // =========================
 
     @PreAuthorize("hasRole('USER')")
-    @GetMapping("/my")
+    @GetMapping("/user/my")
     public ResponseEntity<Page<TransactionResponseDto>> getMyTransactions(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -103,7 +103,7 @@ public class TransactionController {
     // =========================
 
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/users/{userId}")
+    @GetMapping("/admin/users/{userId}")
     public ResponseEntity<Page<TransactionResponseDto>> getTransactionsByUserId(
             @PathVariable UUID userId,
             @RequestParam(defaultValue = "0") int page,
@@ -126,7 +126,7 @@ public class TransactionController {
     // =========================
 
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/allUsers")
+    @GetMapping("/admin/allUsers")
     public ResponseEntity<Page<TransactionResponseDto>> getAllTransactions(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -144,7 +144,7 @@ public class TransactionController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/riskdecision/{transactionId}")
+    @GetMapping("/admin/riskdecision/{transactionId}")
     public ResponseEntity<RiskDecision> getRiskDecisionByTransId(@PathVariable UUID transactionId) {
         log.info("Fetch transaction by id | transactionId={}", transactionId);
         RiskDecision riskDecision= queryService.getRiskDecisionByTransId(transactionId);
@@ -152,7 +152,7 @@ public class TransactionController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{transactionId}/review/approve")
+    @PostMapping("/admin/{transactionId}/review/approve")
     public ResponseEntity<TransactionResponseDto> approveTransaction(
             @PathVariable UUID transactionId
     ) {
@@ -163,7 +163,7 @@ public class TransactionController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{transactionId}/review/reject")
+    @PostMapping("/admin/{transactionId}/review/reject")
     public ResponseEntity<TransactionResponseDto> rejectTransaction(
             @PathVariable UUID transactionId
     ) {

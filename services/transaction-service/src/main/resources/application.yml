@@ -95,4 +95,30 @@ resilience4j:
 
 logging:
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{correlationId}] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [%X{X-Correlation-ID}] - %msg%n"
+
+  level:
+    root: INFO
+
+    # BUSINESS
+    com.gringotts: INFO
+
+    # SPRING
+    org.springframework.boot: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+
+    # DATABASE
+    com.zaxxer.hikari: WARN
+
+    # FEIGN
+    org.springframework.cloud.openfeign: INFO
+
+    org.springframework.kafka: INFO
+    org.apache.kafka.clients.producer.ProducerConfig: INFO
+    org.apache.kafka.clients.producer.KafkaProducer: INFO
+
+    # OPTIONAL TEMP DEBUG
+    # org.apache.kafka.clients.NetworkClient: DEBUG
+    # org.apache.kafka.clients.producer.internals.Sender: DEBUG
+    #org.hibernate.SQL: DEBUG  ONLY during SQL debugging, org.apache.kafka.clients.NetworkClient: DEBUG

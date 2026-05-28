@@ -28,4 +28,5 @@ public class TransactionFinalizedEvent{
     private BigDecimal amount;
     //private String status;
     private TransactionStatus finalStatus;
+    private String correlationId;
 }

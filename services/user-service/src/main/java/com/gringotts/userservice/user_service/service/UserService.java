@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 
 /**
@@ -163,13 +164,15 @@ public class UserService {
 
     @Cacheable(value = "userByKeycloakId", key = "#keycloakId")
     public UserResponseDto getUserByKeycloakId(String keycloakId) {
+        log.info("Get user by keycloakId={}", keycloakId);
         User user = userRepository.findByKeycloakUserIdAndIsActive(keycloakId, IsActive.ACTIVE)
                 .orElseThrow(() -> new UserNotFound("User not found"));
         return userMapper.toDto(user);
     }
 
-    public List<UserResponseDto> getUsersAfterId(Long lastId, int size) {
+    public List<UserResponseDto> getUsersAfterId(UUID lastId, int size) {
 
+        log.info("getting users after id={}", lastId);
         return userRepository
                 .findByUserIdGreaterThanOrderByUserIdAsc(lastId, Pageable.ofSize(size))
                 .stream()
@@ -178,7 +181,7 @@ public class UserService {
     }
 
     @Cacheable(value = "userById", key = "#userId", unless = "#result == null")
-    public UserResponseDto getUserById(Long userId) {
+    public UserResponseDto getUserById(UUID userId) {
 
         log.info("DB HIT → fetching userId={}", userId);
 
@@ -191,9 +194,9 @@ public class UserService {
 
     // ================= STATUS =================
     @Transactional
-    public void deactivateUser(Long userId) {
-
-        User user = userRepository.findById(userId)
+    public void deactivateUser(UUID userId) {
+        log.info("deactivating user={}", userId);
+        User user = (User) userRepository.findByUserId(userId)
                 .orElseThrow(() -> new UserNotFound("User not found"));
 
         if (user.getIsActive() == IsActive.INACTIVE) return;
@@ -206,9 +209,9 @@ public class UserService {
     }
 
     @Transactional
-    public void reactivateUser(Long userId) {
-
-        User user = userRepository.findById(userId)
+    public void reactivateUser(UUID userId) {
+        log.info("reactivating user={}", userId);
+        User user = (User) userRepository.findByUserId(userId)
                 .orElseThrow(() -> new UserNotFound("User not found"));
 
         if (user.getIsActive() == IsActive.ACTIVE) return;

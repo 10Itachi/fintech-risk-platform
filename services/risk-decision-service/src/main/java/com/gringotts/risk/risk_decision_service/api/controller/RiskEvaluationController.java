@@ -53,7 +53,7 @@ public class RiskEvaluationController {
      * ADMIN API
      * Fetch by Decision ID (Primary Key)
      */
-    @GetMapping("/decisions/{decisionId}")
+    @GetMapping("/api/v1/decisions/{decisionId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RiskDecisionAdminResponse> getById(
             @PathVariable @NotNull Long decisionId) {
@@ -69,7 +69,7 @@ public class RiskEvaluationController {
      * ADMIN API
      * Fetch by Transaction ID (1:1 mapping)
      */
-    @GetMapping("/decisions/transaction/{transactionId}")
+    @GetMapping("/api/v1/decisions/transaction/{transactionId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RiskDecisionAdminResponse> getDecisionByTransactionId(
             @PathVariable @NotBlank String transactionId) {
@@ -85,7 +85,7 @@ public class RiskEvaluationController {
      * ADMIN API
      * Paginated listing for audit / dashboards
      */
-    @GetMapping("/decisions")
+    @GetMapping("/api/v1/decisions")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<RiskDecisionAdminResponse>> getAllDecisions(
             @RequestParam(defaultValue = "0") int page,

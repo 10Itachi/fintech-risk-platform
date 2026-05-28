@@ -1,0 +1,7 @@
+target/
+.idea/
+.gradle/
+venv/
+__pycache__/
+logs/
+project-notes/

@@ -34,7 +34,7 @@ public class RiskServiceSecurityConfig {
                                 "/swagger-ui.html",
                                 "/actuator/**").permitAll()
                         .requestMatchers("/risk/evaluate").hasRole("RISKCALLER")
-                        .requestMatchers("/risk/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/risk/api/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth -> oauth
@@ -51,30 +51,34 @@ public class RiskServiceSecurityConfig {
     //this  decoder is called and its default and custom validator are handled automatically by spring security
     @Bean
     public JwtDecoder jwtDecoder(
-            @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String issuerUri
-    ) {
+            @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
+            String issuerUri,
 
-        log.info(
-                "Configuring JwtDecoder with issuer URI: {}",
-                issuerUri
-        );
+            @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
+            String jwkSetUri) {
+
+        log.info("Configuring JwtDecoder with JWK Set URI: {}", jwkSetUri);
 
         NimbusJwtDecoder jwtDecoder =
-                JwtDecoders.fromIssuerLocation(issuerUri);
+                NimbusJwtDecoder
+                        .withJwkSetUri(jwkSetUri)
+                        .build();
 
-        // Default + issuer validation
         OAuth2TokenValidator<Jwt> defaultValidator =
                 JwtValidators.createDefaultWithIssuer(issuerUri);
 
-        // Your custom validator
-        OAuth2TokenValidator<Jwt> customValidator = new CustomJwtValidator();
+        OAuth2TokenValidator<Jwt> customValidator =
+                new CustomJwtValidator();
 
         OAuth2TokenValidator<Jwt> combinedValidator =
-                new DelegatingOAuth2TokenValidator<>(defaultValidator, customValidator);
+                new DelegatingOAuth2TokenValidator<>(
+                        defaultValidator,
+                        customValidator
+                );
 
         jwtDecoder.setJwtValidator(combinedValidator);
 
-        log.info("JwtDecoder configured with JWK + custom validators");
+        log.info("JwtDecoder configured successfully");
 
         return jwtDecoder;
     }

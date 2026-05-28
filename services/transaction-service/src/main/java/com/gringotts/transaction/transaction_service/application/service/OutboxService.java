@@ -7,6 +7,7 @@ import com.gringotts.kafkaevents.TransactionFinalizedEvent;
 import com.gringotts.transaction.transaction_service.domain.exception.OutboxSerializationException;
 import com.gringotts.transaction.transaction_service.domain.model.OutboxEvent;
 import com.gringotts.transaction.transaction_service.domain.model.Transaction;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -23,6 +24,7 @@ public class OutboxService {
 
     private final ObjectMapper objectMapper;
 
+
     public OutboxService(
             ObjectMapper objectMapper
     ) {
@@ -37,6 +39,9 @@ public class OutboxService {
     public OutboxEvent buildTransactionFinalizedEvent(
             Transaction txn
     ) {
+
+        String correlationId =
+                MDC.get("X-Correlation-ID");
 
         UUID eventId = UUID.randomUUID();
 
@@ -54,6 +59,7 @@ public class OutboxService {
                         .email(txn.getEmail())
                         .amount(txn.getAmount())
                         .finalStatus(txn.getTransactionStatus())
+                        .correlationId(correlationId)
                         .build();
 
         try {
@@ -72,6 +78,7 @@ public class OutboxService {
                     .retryCount(0)
                     .nextRetryAt(now)
                     .createdAt(now)
+                    .correlationId(event.getCorrelationId())
                     .build();
 
         } catch (JsonProcessingException ex) {

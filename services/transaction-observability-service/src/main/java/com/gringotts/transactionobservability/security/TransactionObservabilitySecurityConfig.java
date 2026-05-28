@@ -41,7 +41,7 @@ public class TransactionObservabilitySecurityConfig {
                                 "/actuator/metrics"
                         ).permitAll()
 
-                        .requestMatchers("/observability/**")
+                        .requestMatchers("/api/v1/observability/**")
                         .hasRole("ADMIN")
 
                         .anyRequest()

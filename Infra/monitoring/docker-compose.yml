@@ -1,0 +1,34 @@
+services:
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus-data:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - monitoring-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning
+      - ./dashboards:/etc/grafana/dashboards
+      - ./grafana-data:/var/lib/grafana
+    networks:
+      - monitoring-net
+
+networks:
+  monitoring-net:
+    driver: bridge

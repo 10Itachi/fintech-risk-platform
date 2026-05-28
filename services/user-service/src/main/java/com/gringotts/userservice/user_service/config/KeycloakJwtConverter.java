@@ -40,6 +40,6 @@ public class KeycloakJwtConverter implements Converter<Jwt, AbstractAuthenticati
             }
         }
 
-        return new JwtAuthenticationToken(jwt, authorities);
+        return new JwtAuthenticationToken(jwt, authorities,jwt.getClaimAsString("preferred_username"));
     }
 }

@@ -56,7 +56,7 @@ public class OutboxPublisher {
         try{
             log.info("Publishing eventId={} txnId={}",
                     event.getId(), event.getAggregateId());
-            kafkaProducerService.send(event.getAggregateId().toString(), event.getPayload());
+            kafkaProducerService.send(event.getAggregateId().toString(), event.getPayload(), event.getCorrelationId());
             event.setStatus(OutboxStatus.SENT);
             event.setSentAt(Instant.now());
 

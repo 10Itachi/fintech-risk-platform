@@ -73,7 +73,7 @@ public class SesEmailClient {
                 """
                 event=MOCK_EMAIL_SENT
                 to={}
-                subject={}
+                subject={}₹
                 body={}
                 """,
                 to,

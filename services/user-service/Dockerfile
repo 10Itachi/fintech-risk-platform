@@ -1,10 +1,33 @@
-FROM eclipse-temurin:17-jdk
+# ==========================================
+# STAGE 1: Build the application
+# ==========================================
+FROM maven:3.9.6-eclipse-temurin-17 AS builder
+
+WORKDIR /build
+
+# 1. Copy only the pom.xml first to cache dependencies
+COPY pom.xml .
+
+# 2. Go offline to download dependencies (makes future builds much faster)
+RUN mvn dependency:go-offline -B
+
+# 3. Copy the source code
+COPY src ./src
+
+# 4. Package the application (skipping tests for faster builds)
+RUN mvn clean package -DskipTests
+
+# ==========================================
+# STAGE 2: Run the application
+# ==========================================
+FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-COPY target/user-service-*.jar app.jar
+# 5. Copy the compiled JAR from the builder stage into this fresh stage
+COPY --from=builder /build/target/user-service-*.jar app.jar
 
-EXPOSE 8080
+EXPOSE 8081
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
 

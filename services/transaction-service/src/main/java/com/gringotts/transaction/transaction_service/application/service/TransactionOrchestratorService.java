@@ -28,21 +28,13 @@ import java.util.UUID;
 public class TransactionOrchestratorService {
 
     private final TransactionCommandService commandService;
-
     private final RiskEvaluationService riskService;
-
     private final RiskRequestMapper riskRequestMapper;
-
     private final TransactionRepository transactionRepository;
-
     private final TransactionMapper transactionMapper;
-
     private final TransactionRiskFeatureService riskFeatureService;
-
     private final TransactionBusinessValidator businessValidator;
-
     private final MeterRegistry meterRegistry;
-
     private final RedisIdempotencyService redisIdempotencyService;
 
     public TransactionOrchestratorService(
@@ -69,9 +61,7 @@ public class TransactionOrchestratorService {
     }
 
     /*
-     =========================================================
      MAIN TRANSACTION ORCHESTRATION FLOW
-     =========================================================
 
      Responsibilities:
      - idempotency coordination
@@ -89,113 +79,69 @@ public class TransactionOrchestratorService {
             TransactionRequestDto request,
             String idempotencyKey
     ) {
+        meterRegistry.counter("transaction.create.request").increment();
+        Timer.Sample totalTimer = Timer.start(meterRegistry);
 
-        meterRegistry.counter("transaction.create.request")
-                .increment();
-
-        Timer.Sample totalTimer =
-                Timer.start(meterRegistry);
-
-        log.info(
-                "transaction_creation_started idempotencyKey={}",
-                idempotencyKey
-        );
+        log.info("transaction_creation_started idempotencyKey={}",
+                idempotencyKey);
 
         boolean isNewRequest = true;
 
         /*
-         =====================================================
          REDIS IDEMPOTENCY LOCK
-         =====================================================
 
          Redis is optimization layer.
          DB unique constraint remains final safety net.
          */
         try {
-
-            isNewRequest =
-                    redisIdempotencyService.tryLock(idempotencyKey);
-
+            isNewRequest = redisIdempotencyService.tryLock(idempotencyKey);
         } catch (Exception ex) {
+            meterRegistry.counter("transaction.redis.failure",
+                    "operation", "lock").increment();
 
-            meterRegistry.counter(
-                    "transaction.redis.failure",
-                    "operation",
-                    "lock"
-            ).increment();
-
-            log.error(
-                    "redis_lock_failure idempotencyKey={}",
-                    idempotencyKey,
-                    ex
-            );
+            log.error("redis_lock_failure idempotencyKey={}", idempotencyKey, ex);
 
             /*
              Continue processing.
-
              DB unique constraint still protects duplicates.
              */
             isNewRequest = true;
         }
 
         /*
-         =====================================================
          DUPLICATE REQUEST FLOW
-         =====================================================
          */
         if (!isNewRequest) {
 
-            meterRegistry.counter(
-                    "transaction.duplicate"
-            ).increment();
-
-            log.warn(
-                    "duplicate_transaction_request idempotencyKey={}",
-                    idempotencyKey
-            );
+            meterRegistry.counter("transaction.duplicate").increment();
+            log.warn("duplicate_transaction_request idempotencyKey={}",idempotencyKey);
 
             /*
-             -------------------------------------------------
              FAST REDIS LOOKUP
-             -------------------------------------------------
 
              If Redis already contains completed transactionId,
              fetch directly from DB using transactionId.
              */
             try {
-
-                Optional<String> completedTxnId =
-                        redisIdempotencyService
-                                .getCompletedTransactionId(
-                                        idempotencyKey
-                                );
+                Optional<String> completedTxnId = redisIdempotencyService
+                                .getCompletedTransactionId(idempotencyKey);
 
                 if (completedTxnId.isPresent()) {
 
-                    UUID txnId =
-                            UUID.fromString(completedTxnId.get());
-
+                    UUID txnId = UUID.fromString(completedTxnId.get());
                     return transactionRepository.findById(txnId)
                             .map(transactionMapper::toDto)
-                            .orElseThrow(() ->
-                                    new RuntimeException(
+                            .orElseThrow(() -> new RuntimeException(
                                             "Transaction exists in Redis but missing in DB"
                                     ));
                 }
 
             } catch (Exception ex) {
 
-                meterRegistry.counter(
-                        "transaction.redis.failure",
-                        "operation",
-                        "read"
-                ).increment();
+                meterRegistry.counter("transaction.redis.failure",
+                        "operation", "read").increment();
 
-                log.error(
-                        "redis_read_failure idempotencyKey={}",
-                        idempotencyKey,
-                        ex
-                );
+                log.error("redis_read_failure idempotencyKey={}", idempotencyKey, ex);
             }
 
             /*
@@ -208,18 +154,12 @@ public class TransactionOrchestratorService {
              - Redis inconsistency window
              - markCompleted failure
              */
-            Optional<Transaction> existingTransaction =
-                    transactionRepository.findByIdempotencyKey(
-                            idempotencyKey
-                    );
+            Optional<Transaction> existingTransaction = transactionRepository.findByIdempotencyKey(idempotencyKey);
 
             if (existingTransaction.isPresent()) {
+                Transaction txn = existingTransaction.get();
 
-                Transaction txn =
-                        existingTransaction.get();
-
-                log.info(
-                        "duplicate_resolved_from_db idempotencyKey={} txnId={} status={}",
+                log.info("duplicate_resolved_from_db idempotencyKey={} txnId={} status={}",
                         idempotencyKey,
                         txn.getTransactionId(),
                         txn.getInternalStatus()
@@ -239,9 +179,7 @@ public class TransactionOrchestratorService {
             }
 
             /*
-             -------------------------------------------------
              TRANSACTION STILL PROCESSING
-             -------------------------------------------------
 
              Never block servlet thread using sleep/retry loops.
              */
@@ -255,31 +193,23 @@ public class TransactionOrchestratorService {
         }
 
         /*
-         =====================================================
          NEW TRANSACTION FLOW
-         =====================================================
          */
         try {
 
             /*
-             -------------------------------------------------
              BUSINESS VALIDATION
-             -------------------------------------------------
              */
             businessValidator.validate(request);
 
             /*
-             -------------------------------------------------
              BUILD TRANSACTION
-             -------------------------------------------------
              */
             Transaction txn =
                     buildTransaction(request, idempotencyKey);
 
             /*
-             -------------------------------------------------
              TX1 → INITIAL PERSIST
-             -------------------------------------------------
 
              Ensures:
              - transactionId exists
@@ -295,30 +225,26 @@ public class TransactionOrchestratorService {
              */
             txn.setTotalAmountLast24h(
                     riskFeatureService.totalAmountLast24H(
-                            txn.getUserId(),
+                            txn.getEmail(),
                             txn.getCreatedAt()
                     )
             );
 
             txn.setTxnCountLast24h(
                     riskFeatureService.numberOfTransactionsLast24h(
-                            txn.getUserId(),
+                            txn.getEmail(),
                             txn.getCreatedAt()
                     )
             );
 
             /*
-             -------------------------------------------------
              BUILD RISK REQUEST
-             -------------------------------------------------
              */
             RiskDecisionRequest riskRequest =
                     riskRequestMapper.toRiskRequest(txn);
 
             /*
-             -------------------------------------------------
              RISK SERVICE CALL
-             -------------------------------------------------
              */
             Timer.Sample riskTimer =
                     Timer.start(meterRegistry);
@@ -346,9 +272,7 @@ public class TransactionOrchestratorService {
                     );
 
             /*
-             =================================================
              MARK REDIS COMPLETED
-             =================================================
 
              Enables fast duplicate replay handling.
              */
@@ -376,9 +300,7 @@ public class TransactionOrchestratorService {
             }
 
             /*
-             =================================================
              SUCCESS METRICS
-             =================================================
              */
             meterRegistry.counter(
                     "transaction.completed",
@@ -397,9 +319,7 @@ public class TransactionOrchestratorService {
         } catch (Exception ex) {
 
             /*
-             =================================================
              FAILURE RECOVERY
-             =================================================
 
              Release IN_PROGRESS lock so request can retry.
              */
@@ -422,9 +342,7 @@ public class TransactionOrchestratorService {
     }
 
     /*
-     =========================================================
      FINAL STATE CHECK
-     =========================================================
      */
     private boolean isFinalState(
             InternalTransactionStatus status
@@ -436,9 +354,7 @@ public class TransactionOrchestratorService {
     }
 
     /*
-     =========================================================
      BUILD TRANSACTION AGGREGATE
-     =========================================================
      */
     private Transaction buildTransaction(TransactionRequestDto request, String idempotencyKey) {
 

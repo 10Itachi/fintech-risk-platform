@@ -5,14 +5,14 @@ import com.gringotts.userservice.user_service.dto.UserResponseDto;
 import com.gringotts.userservice.user_service.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -23,7 +23,7 @@ public class UserController {
 
     //  PUBLIC → Signup (no token required)
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/createUser")
+    @PostMapping("/admin/createUser")
     public ResponseEntity<UserResponseDto> createUser(
             @Valid @RequestBody UserRequestDto request) {
 
@@ -34,19 +34,19 @@ public class UserController {
 
 
     // 🔒 AUTHENTICATED USER → PROFILE
-    @GetMapping("/profile")
-    public ResponseEntity<UserResponseDto> getProfile(Authentication authentication) {
-        String username = authentication.getName();
+    @GetMapping("/user/profile")
+    public ResponseEntity<UserResponseDto> getProfile(JwtAuthenticationToken authentication) {
+        String keycloakId = authentication.getToken().getSubject();
         return ResponseEntity.ok(
-                userService.getUserByKeycloakId(username)
+                userService.getUserByKeycloakId(keycloakId)
         );
     }
 
     //  ADMIN → GET ALL USERS
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/getUsers")
+    @GetMapping("/admin/getUsers")
     public ResponseEntity<List<UserResponseDto>> getUsers(
-            @RequestParam(defaultValue = "0") Long lastId,
+            @RequestParam(defaultValue = "0") UUID lastId,
             @RequestParam(defaultValue = "10") int size) {
 
         return ResponseEntity.ok(userService.getUsersAfterId(lastId, size));
@@ -54,25 +54,30 @@ public class UserController {
 
     // ADMIN OR SELF → GET USER BY ID
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
-    @GetMapping("/getUserById/{userId}")
-    public ResponseEntity<UserResponseDto> getUserById(@PathVariable Long userId) {
+    @GetMapping("/shared/getUserById/{userId}")
+    public ResponseEntity<UserResponseDto> getUserById(@PathVariable UUID userId) {
 
         return ResponseEntity.ok(userService.getUserById(userId));
     }
 
     //  ADMIN → DEACTIVATE USER
     @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/{userId}/deactivate")
-    public ResponseEntity<String> deactivateUser(@PathVariable Long userId) {
+    @PatchMapping("/admin/{userId}/deactivate")
+    public ResponseEntity<String> deactivateUser(@PathVariable UUID userId) {
 
         userService. deactivateUser(userId);
         return ResponseEntity.ok("User deactivated successfully");
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/{userId}/activate")
-    public ResponseEntity<Void> activate(@PathVariable Long userId) {
+    @PatchMapping("/admin/{userId}/activate")
+    public ResponseEntity<Void> activate(@PathVariable UUID userId) {
         userService.reactivateUser(userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/shared/ping")
+    public String ping() {
+        return "PING OK";
     }
 }

@@ -25,11 +25,11 @@ public class TransactionRiskFeatureService {
         this.meterRegistry = meterRegistry;
     }
 
-    public BigDecimal totalAmountLast24H(UUID userId, Instant referenceTime) {
-        validateInputs(userId, referenceTime);
+    public BigDecimal totalAmountLast24H(String emailId, Instant referenceTime) {
+        validateInputs(emailId, referenceTime);
         Timer.Sample timer = Timer.start(meterRegistry);
         Instant windowStart = calculate24HourWindow(referenceTime);
-        BigDecimal sum = transactionRepository.sumAmountLast24H(userId, windowStart);
+        BigDecimal sum = transactionRepository.sumAmountLast24H(emailId, windowStart);
         timer.stop(
                 meterRegistry.timer(
                         "risk.feature.total.amount.latency"
@@ -40,11 +40,11 @@ public class TransactionRiskFeatureService {
                 ? sum
                 : BigDecimal.ZERO;
     }
-    public Integer numberOfTransactionsLast24h(UUID userId, Instant referenceTime) {
-        validateInputs(userId, referenceTime);
+    public Integer numberOfTransactionsLast24h(String emailId, Instant referenceTime) {
+        validateInputs(emailId, referenceTime);
         Timer.Sample timer = Timer.start(meterRegistry);
         Instant windowStart = calculate24HourWindow(referenceTime);
-        Integer count= transactionRepository.countTxnsLast24h(userId, windowStart);
+        Integer count= transactionRepository.countTxnsLast24h(emailId, windowStart);
         timer.stop(
                 meterRegistry.timer(
                         "risk.feature.txn.count.latency"
@@ -69,11 +69,11 @@ public class TransactionRiskFeatureService {
     }
 
     private void validateInputs(
-            UUID userId,
+            String emailId,
             Instant referenceTime
     ) {
 
-        if (userId == null) {
+        if (emailId == null) {
 
             throw new IllegalArgumentException(
                     "UserId cannot be null "

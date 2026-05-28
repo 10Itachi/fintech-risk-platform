@@ -23,6 +23,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.dao.DataAccessException;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -51,7 +52,7 @@ class UserServiceTest {
         request.setEmail("john@test.com");
 
         user = new User();
-        user.setUserId(1L);
+        user.setUserId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
         user.setUserName("john");
         user.setKeycloakUserId("kc-123");
 
@@ -154,14 +155,14 @@ class UserServiceTest {
 
         user.setIsActive(IsActive.ACTIVE);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByUserId(UUID.fromString("00000000-0000-0000-0000-000000000001"))).thenReturn(Optional.of(user));
         when(cacheManager.getCache("userById")).thenReturn(cache);
         when(cacheManager.getCache("userByUsername")).thenReturn(cache);
 
-        userService.deactivateUser(1L);
+        userService.deactivateUser(UUID.fromString("00000000-0000-0000-0000-000000000001"));
 
         verify(identityProviderService).disableUser("kc-123");
-        verify(cache).evict(1L);
+        verify(cache).evict(UUID.fromString("00000000-0000-0000-0000-000000000001"));
         verify(cache).evict("john");
     }
 
@@ -170,14 +171,14 @@ class UserServiceTest {
 
         user.setIsActive(IsActive.INACTIVE);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByUserId(UUID.fromString("00000000-0000-0000-0000-000000000001"))).thenReturn(Optional.of(user));
         when(cacheManager.getCache("userById")).thenReturn(cache);
         when(cacheManager.getCache("userByUsername")).thenReturn(cache);
 
-        userService.reactivateUser(1L);
+        userService.reactivateUser(UUID.fromString("00000000-0000-0000-0000-000000000001"));
 
         verify(identityProviderService).enableUser("kc-123");
-        verify(cache).evict(1L);
+        verify(cache).evict(UUID.fromString("00000000-0000-0000-0000-000000000001"));
         verify(cache).evict("john");
     }
 }

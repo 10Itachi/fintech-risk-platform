@@ -17,7 +17,7 @@ public class FeignCorrelationConfig {
             @Override
             public void apply(RequestTemplate template) {
 
-                String correlationId = MDC.get("correlationId");
+                String correlationId = MDC.get("X-Correlation-ID");
 
                 if (correlationId != null && !correlationId.isBlank()) {
                     template.header(CORRELATION_ID_HEADER, correlationId);

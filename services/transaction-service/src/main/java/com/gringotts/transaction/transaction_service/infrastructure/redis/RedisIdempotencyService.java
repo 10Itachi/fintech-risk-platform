@@ -10,28 +10,21 @@ import java.util.Optional;
 public class RedisIdempotencyService {
 
     /*
-     =========================================================
      REDIS KEY FORMAT
-     =========================================================
-
      Example:
      idm:txn:abc-123
      */
     private static final String KEY_PREFIX = "idm:txn:";
 
     /*
-     =========================================================
      REDIS STATES
-     =========================================================
      */
     private static final String IN_PROGRESS = "IN_PROGRESS";
 
     private static final String COMPLETED = "COMPLETED";
 
     /*
-     =========================================================
      TTL CONFIGURATION
-     =========================================================
 
      IN_PROGRESS:
      Prevent stale locks during crashes.
@@ -54,18 +47,14 @@ public class RedisIdempotencyService {
     }
 
     /*
-     =========================================================
      BUILD REDIS KEY
-     =========================================================
      */
     private String buildKey(String idempotencyKey) {
         return KEY_PREFIX + idempotencyKey;
     }
 
     /*
-     =========================================================
      TRY ACQUIRE DISTRIBUTED LOCK
-     =========================================================
 
      Redis command:
      SET key value NX EX ttl
@@ -89,9 +78,7 @@ public class RedisIdempotencyService {
     }
 
     /*
-     =========================================================
      MARK TRANSACTION COMPLETED
-     =========================================================
 
      Example value:
      COMPLETED:transactionId
@@ -114,9 +101,7 @@ public class RedisIdempotencyService {
     }
 
     /*
-     =========================================================
      FETCH RAW REDIS STATE
-     =========================================================
      */
     public Optional<String> getState(
             String idempotencyKey
@@ -130,9 +115,7 @@ public class RedisIdempotencyService {
     }
 
     /*
-     =========================================================
      CHECK IF REQUEST STILL PROCESSING
-     =========================================================
      */
     public boolean isInProgress(String idempotencyKey) {
 
@@ -142,9 +125,7 @@ public class RedisIdempotencyService {
     }
 
     /*
-     =========================================================
      GET COMPLETED TRANSACTION ID
-     =========================================================
 
      Example Redis value:
      COMPLETED:txn-123
@@ -179,12 +160,8 @@ public class RedisIdempotencyService {
     }
 
     /*
-     =========================================================
      RELEASE LOCK
-     =========================================================
-
      Only remove IN_PROGRESS state.
-
      Prevent accidental deletion of COMPLETED entries.
      */
     public void releaseLock(String idempotencyKey) {

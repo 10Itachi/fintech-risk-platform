@@ -162,7 +162,29 @@ Response:
   "message": "User deactivated successfully"
 }
 ```
+### 2.6 get User By Id 
 
+```http
+GET /api/v1/users/shared/getUserById/:userId
+```
+
+Authorization:
+
+* ADMIN and any valid resource owner
+
+Behavior:
+
+* gets user by id
+
+Response:
+
+```json
+{
+  "userId": "787c8a73-5674-42aa-a84d-5ba32f894e66",
+  "userName": "user2",
+  "isActive": "ACTIVE"
+}
+```
 ---
 
 ### 2.6 Activate User

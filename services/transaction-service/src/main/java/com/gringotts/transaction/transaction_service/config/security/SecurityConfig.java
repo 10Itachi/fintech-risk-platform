@@ -34,6 +34,9 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/actuator/metrics").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/transactions/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/transactions/user/**").hasRole("USER")
+                        .requestMatchers("/api/v1/transactions/shared/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2->oauth2

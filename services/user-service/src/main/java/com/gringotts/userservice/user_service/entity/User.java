@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "Users")
@@ -20,8 +21,8 @@ import java.time.LocalDateTime;
 public class User {
 
     @Id
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
-    private Long userId;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID userId;
 
    /* @Column(unique = true, nullable = false)  if unique user code is needed
     private String userCode;*/

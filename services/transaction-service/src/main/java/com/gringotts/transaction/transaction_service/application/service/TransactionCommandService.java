@@ -4,6 +4,7 @@ import com.gringotts.dto.RiskDecisionResponse;
 import com.gringotts.enums.TransactionStatus;
 import com.gringotts.transaction.transaction_service.domain.businessEnums.InternalTransactionStatus;
 import com.gringotts.transaction.transaction_service.domain.exception.InvalidTransactionStateException;
+import com.gringotts.transaction.transaction_service.domain.exception.TransactionNotFoundException;
 import com.gringotts.transaction.transaction_service.domain.model.OutboxEvent;
 import com.gringotts.transaction.transaction_service.domain.model.RiskDecision;
 import com.gringotts.transaction.transaction_service.domain.model.Transaction;
@@ -138,7 +139,7 @@ public class TransactionCommandService {
         // FETCH TRANSACTION
         Transaction txn = transactionRepository.findById(transactionId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Transaction not found: " + transactionId));
+                        new TransactionNotFoundException("Transaction not found: " + transactionId));
 
 
         // STATE VALIDATION (MUST BE REVIEW_PENDING)

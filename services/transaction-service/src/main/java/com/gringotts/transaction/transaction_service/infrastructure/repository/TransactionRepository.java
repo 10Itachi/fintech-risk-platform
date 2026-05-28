@@ -1,7 +1,7 @@
 package com.gringotts.transaction.transaction_service.infrastructure.repository;
 
 import com.gringotts.transaction.transaction_service.domain.model.Transaction;
-import feign.Param;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,21 +22,21 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
         @Query("""
                 SELECT COALESCE(SUM(t.amount), 0)
                 FROM Transaction t
-                WHERE t.userId =:userId
-                AND t.createdAt >= :windowStart
+                WHERE t.email = :email
+                AND t.transactionTime >= :windowStart
                 AND t.transactionStatus IN ('APPROVED','INITIATED')
-                """)
-        BigDecimal sumAmountLast24H(@Param ("userId")  UUID userId,
+                """)  // WHERE t.userId =:userId uuid conflict with seeded userid hence replaced with WHERE t.email = :email
+        BigDecimal sumAmountLast24H(@Param ("email")  String emailId,
                                     @Param("windowStart")Instant windowStart);
 
         @Query("""
                 SELECT COUNT(t)
                 FROM Transaction t
-                WHERE t.userId = :userId
-                AND t.createdAt >= :windowStart
+                WHERE t.email = :email
+                AND t.transactionTime >= :windowStart
                 AND t.transactionStatus IN ('APPROVED', 'INITIATED')
-                """)
-        Integer countTxnsLast24h(@Param ("userId")  UUID userId,
+                """) // WHERE t.userId =:userId uuid conflict with seeded userid hence replaced with WHERE t.email = :email
+        Integer countTxnsLast24h(@Param ("email")  String emailId,
                              @Param("windowStart")Instant windowStart);
 
     Optional<Transaction> findByIdempotencyKey(String idempotencyKey);

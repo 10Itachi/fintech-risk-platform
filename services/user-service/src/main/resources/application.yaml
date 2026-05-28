@@ -13,8 +13,8 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: ${USER_DDL_AUTO:update}
-    show-sql: ${USER_SHOW_SQL:true}
+      ddl-auto: ${USER_DDL_AUTO}
+    show-sql: ${USER_SHOW_SQL}
 
   security:
     oauth2:
@@ -44,6 +44,7 @@ keycloak:
 scheduler:
   reconciliation:
     delay: ${SCHEDULER_RECONCILIATION_DELAY}
+    initial-delay: ${SCHEDULER_INITIAL_DELAY}
 
 management:
   endpoints:
@@ -80,26 +81,20 @@ resilience4j:
         #After 10 seconds: The circuit moves to a Half-Open state. It will let a few "test" requests through to see if Ke
 
 logging:
+
   level:
+    ## use trace and debug for detail
     com.gringotts: INFO
-    org.springframework.cache: TRACE
+
+    # org.springframework.cache: TRACE
     org.springframework.boot: INFO
-    org.springframework.web: WARN
-    org.springframework.security: WARN
+    org.springframework.web: INFO
+    org.springframework.security: INFO
 
-    org.hibernate.SQL: WARN
-    org.hibernate.orm.jdbc.bind: WARN
-    org.hibernate.orm.connections.pooling: WARN
-
-    org.apache.kafka.clients.consumer.ConsumerConfig: WARN
-    org.apache.kafka.clients.Metadata: WARN
-    org.apache.kafka.clients.NetworkClient: ERROR
-    org.apache.kafka.clients.consumer.internals.ConsumerCoordinator: WARN
-    org.apache.kafka.clients.consumer.internals.ConsumerUtils: WARN
-    org.apache.kafka.clients.consumer.internals.ConsumerRebalanceListenerInvoker: INFO
-
-    org.springframework.kafka: WARN
     # TOMCAT
     org.apache.catalina: INFO
     # HIKARI
     com.zaxxer.hikari: INFO
+
+  pattern:
+      console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [%X{X-Correlation-ID}] - %msg%n"

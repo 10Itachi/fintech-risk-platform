@@ -25,7 +25,7 @@ public class RiskPolicyProperties {
     private Duration maxFutureDrift;
     private Duration maxPastDrift;
 
-    // ML thresholds
+    // final thresholds
     private double declineThreshold;
     private double reviewThreshold;
 

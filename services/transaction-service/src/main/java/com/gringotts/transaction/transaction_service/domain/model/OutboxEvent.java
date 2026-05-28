@@ -114,4 +114,6 @@ public class OutboxEvent {
     private Instant createdAt;
 
     private Instant sentAt;
+
+    private String correlationId;
 }

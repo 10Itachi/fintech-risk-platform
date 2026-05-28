@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/observability")
+@RequestMapping("/api/v1/observability")
 @RequiredArgsConstructor
 public class TransactionObservabilityController {
 

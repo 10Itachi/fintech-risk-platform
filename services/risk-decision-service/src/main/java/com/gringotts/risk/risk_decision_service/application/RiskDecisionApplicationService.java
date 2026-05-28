@@ -207,6 +207,9 @@ public class RiskDecisionApplicationService {
                 Timer.Sample softTimer = Timer.start(meterRegistry);
                 resilientSoftRuleEngine.evaluate(ctx);
                 softTimer.stop(meterRegistry.timer("risk.soft.latency"));
+                LOGGER.error("soft reason code ={}",ctx.getSoftReasonCodes().toString());
+                LOGGER.error("adjusted risk ={}", ctx.getAdjustedRisk());
+
             }
 
             // the final decision using RiskDecisionPolicy

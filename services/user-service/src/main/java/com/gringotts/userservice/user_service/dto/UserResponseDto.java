@@ -6,13 +6,15 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 public class UserResponseDto {
 
-    private Long userId;
+    private UUID userId;
     private String userName;
     private IsActive isActive;
 

@@ -47,10 +47,12 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/actuator/**").permitAll()
-                        .requestMatchers("/api/v1/users").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/users/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/users/user/**").hasRole("USER")
+                                .requestMatchers("/api/v1/users/shared/**").authenticated()
+                                .anyRequest().authenticated()
                         // All endpoints require authentication
-                        .requestMatchers("/api/v1/users/getUserById/**").authenticated()
-                        .anyRequest().authenticated()
+
                 )
 
                 // 4) JWT resource server (Keycloak)

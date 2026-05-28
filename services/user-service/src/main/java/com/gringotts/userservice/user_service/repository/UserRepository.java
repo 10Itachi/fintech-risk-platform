@@ -13,12 +13,15 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    Optional<User> findByUserIdAndIsActive(Long userId, IsActive isActive);
+    Optional<User> findByUserIdAndIsActive(UUID userId, IsActive isActive);
     Optional<User> findByKeycloakUserIdAndIsActive(String keycloakUserId, IsActive isActive);
-    List<User> findByUserIdGreaterThanOrderByUserIdAsc(Long lastId, Pageable pageable);
+    List<User> findByUserIdGreaterThanOrderByUserIdAsc(UUID lastId, Pageable pageable);
     Optional<User> findByUserNameAndIsActive(String username, IsActive isActive);
+
+    Optional<Object> findByUserId(UUID userId);
 }

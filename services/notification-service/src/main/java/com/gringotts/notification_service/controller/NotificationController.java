@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -17,7 +18,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/notifications")
+@RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
 public class NotificationController {
 
@@ -28,6 +29,7 @@ public class NotificationController {
      GET FAILED NOTIFICATIONS
      =========================================================
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/failed")
     public ResponseEntity<Page<FailedNotificationEvent>> getFailedNotifications(
 
@@ -60,6 +62,7 @@ public class NotificationController {
      GET FAILED NOTIFICATION BY ID
      =========================================================
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/failed/{id}")
     public ResponseEntity<FailedNotificationEvent> getFailedNotification(
 
@@ -78,6 +81,7 @@ public class NotificationController {
      RETRY FAILED NOTIFICATION
      =========================================================
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/failed/{id}/retry")
     public ResponseEntity<Map<String, Object>> retryFailedNotification(
 
@@ -103,6 +107,7 @@ public class NotificationController {
      GET PROCESSED NOTIFICATION EVENT
      =========================================================
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/events/{eventId}")
     public ResponseEntity<NotificationProcessed> getProcessedNotificationEvent(
 

@@ -28,7 +28,8 @@ public class KeycloakToDbReconciliationScheduler {
 
     private static final int PAGE_SIZE = 50;
 
-    @Scheduled(fixedDelayString = "${scheduler.reconciliation.delay}")
+    @Scheduled(fixedDelayString = "${scheduler.reconciliation.delay}",
+    initialDelayString = "${scheduler.reconciliation.initial-delay}")
     public void syncKeycloakToDb() {
 
         log.info("Starting Keycloak → DB reconciliation");

@@ -1,0 +1,47 @@
+{
+  "title": "Risk Decision Service",
+  "schemaVersion": 38,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Requests per Second",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(risk_decision_requests_total[1m])"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency P95",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(risk_decision_latency_seconds_bucket[1m]))"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Failure Rate",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(risk_decision_failure_total[1m])"
+        }
+      ]
+    },
+    {
+      "type": "piechart",
+      "title": "Decision Outcomes",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(risk_decision_result_total[1m]))"
+        }
+      ]
+    }
+  ]
+}
