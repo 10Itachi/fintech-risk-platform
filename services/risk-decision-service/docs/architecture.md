@@ -1,16 +1,15 @@
-# architecture.md
-
 # Risk Decision Service Architecture
 
 # Architectural Style
 
 The service follows:
 
-- Layered Microservice Architecture
-- Domain-Oriented Design
-- Context-Driven Risk Evaluation
-- Synchronous Fraud Decision Pipeline
-- Explainable Decision Architecture
+* Layered Microservice Architecture
+* Domain-Oriented Design
+* Context-Driven Risk Evaluation
+* Synchronous Fraud Decision Pipeline
+* Explainable Decision Architecture
+* AI-Assisted Fraud Investigation Architecture
 
 ---
 
@@ -25,12 +24,15 @@ The service follows:
 ┌──────────────────────────────────────┐
 │ API Layer                            │
 │ - RiskEvaluationController           │
+│ - RiskDecisionAdminController        │
+│ - AiInvestigationController          │
 └──────────────────────────────────────┘
                     |
                     v
 ┌──────────────────────────────────────┐
 │ Application Orchestration Layer      │
 │ - RiskDecisionApplicationService     │
+│ - AiInvestigationService             │
 └──────────────────────────────────────┘
                     |
                     v
@@ -66,8 +68,27 @@ The service follows:
                     v
 ┌──────────────────────────────────────┐
 │ Persistence & Audit Layer            │
-│ - MySql                         │
+│ - MySQL                              │
 │ - Redis                              │
+│ - RiskDecisionTraceEntity            │
+│ - RiskDecisionReason                 │
+└──────────────────────────────────────┘
+                    |
+                    v
+┌──────────────────────────────────────┐
+│ AI Investigation Layer               │
+│ - FraudPromptBuilder                 │
+│ - Spring AI                          │
+│ - Ollama                             │
+│ - Qwen Model                         │
+└──────────────────────────────────────┘
+                    |
+                    v
+┌──────────────────────────────────────┐
+│ Investigation Summary Generation     │
+│ - Investigation Summary              │
+│ - Risk Indicators                    │
+│ - Recommended Actions                │
 └──────────────────────────────────────┘
 ```
 
@@ -79,15 +100,18 @@ The service follows:
 
 Responsible for:
 
-- HTTP API exposure
-- request validation
-- response mapping
-- API contract management
+* HTTP API exposure
+* Request validation
+* Response mapping
+* API contract management
+* Security enforcement
 
-Primary component:
+Primary Components:
 
 ```text
 RiskEvaluationController
+RiskDecisionAdminController
+AiInvestigationController
 ```
 
 ---
@@ -98,16 +122,18 @@ Coordinates complete risk evaluation lifecycle.
 
 Responsibilities:
 
-- transaction orchestration
-- idempotency validation
-- resilience coordination
-- pipeline execution
-- trace persistence
+* Transaction orchestration
+* Idempotency validation
+* Resilience coordination
+* Pipeline execution
+* Trace persistence
+* AI investigation orchestration
 
-Primary component:
+Primary Components:
 
 ```text
 RiskDecisionApplicationService
+AiInvestigationService
 ```
 
 ---
@@ -116,7 +142,7 @@ RiskDecisionApplicationService
 
 Maintains centralized mutable transaction state.
 
-Primary object:
+Primary Object:
 
 ```text
 RiskDecisionContext
@@ -124,12 +150,12 @@ RiskDecisionContext
 
 Stores:
 
-- request metadata
-- derived features
-- ML scores
-- reason codes
-- rule matches
-- final decision
+* Request metadata
+* Derived features
+* ML scores
+* Reason codes
+* Rule matches
+* Final decision
 
 ---
 
@@ -139,17 +165,17 @@ Evaluates deterministic fraud conditions.
 
 Characteristics:
 
-- compliance-safe
-- deterministic
-- explainable
-- blocking-oriented
+* Compliance-safe
+* Deterministic
+* Explainable
+* Blocking-oriented
 
 Examples:
 
-- blocked device
-- blacklisted account
-- sanctions violation
-- impossible geography
+* Blocked device
+* Blacklisted account
+* Sanctions violation
+* Impossible geography
 
 ---
 
@@ -159,17 +185,17 @@ Evaluates heuristic behavioral anomalies.
 
 Characteristics:
 
-- additive scoring
-- heuristic-based
-- partially explainable
-- behavior-focused
+* Additive scoring
+* Heuristic-based
+* Partially explainable
+* Behavior-focused
 
 Examples:
 
-- new device
-- suspicious timing
-- risky geography
-- unusual amount patterns
+* New device
+* Suspicious timing
+* Risky geography
+* Unusual amount patterns
 
 ---
 
@@ -194,9 +220,9 @@ Probability Score Generation
 
 Outputs:
 
-- fraud probability
-- model metadata
-- scoring audit data
+* Fraud probability
+* Model metadata
+* Scoring audit data
 
 ---
 
@@ -204,13 +230,13 @@ Outputs:
 
 Applies governance thresholds.
 
-Decision matrix:
+Decision Matrix:
 
-| Risk Level | Decision |
-|---|---|
-| Low Risk | APPROVED |
-| Medium Risk | REVIEW |
-| High Risk | DECLINED |
+| Risk Level  | Decision |
+| ----------- | -------- |
+| Low Risk    | APPROVED |
+| Medium Risk | REVIEW   |
+| High Risk   | DECLINED |
 
 ---
 
@@ -218,44 +244,242 @@ Decision matrix:
 
 Handles:
 
-- audit trace persistence
-- historical lookups
-- device history
-- operational storage
+* Audit trace persistence
+* Historical lookups
+* Device history
+* Operational storage
+* AI investigation caching
 
 Technologies:
 
-- MySQL
-- Spring Data JPA
+* MySQL
+* Spring Data JPA
+* Redis
+
+Stored Audit Data:
+
+```text
+transactionId
+finalStatus
+mlProbability
+reasonCodes
+modelName
+modelVersion
+trainedAt
+policyVersion
+evaluatedAt
+```
 
 ---
 
-## 9. Infrastructure Layer
+## 9. AI Investigation Layer
 
-Provides:
+Provides analyst-oriented explainability using Generative AI.
 
-- security
-- correlation IDs
-- Redis integration
-- configuration
-- exception handling
+Purpose:
+
+Transform machine-generated fraud decisions into business-readable investigation reports.
+
+Primary Components:
+
+```text
+AiInvestigationService
+FraudPromptBuilder
+Spring AI ChatClient
+Ollama
+```
 
 ---
 
-## 10. Observability Layer
+### FraudPromptBuilder
+
+Responsibilities:
+
+* Prompt construction
+* Context enrichment
+* Standardized analyst instructions
+
+Inputs:
+
+```text
+transactionId
+finalStatus
+mlProbability
+reasonCodes
+policyVersion
+modelName
+modelVersion
+```
+
+---
+
+### AiInvestigationService
+
+Responsibilities:
+
+* Load risk decision traces
+* Build investigation prompts
+* Invoke LLM
+* Generate fraud investigation summaries
+* Cache investigation results
+* Collect AI observability metrics
+
+---
+
+### LLM Integration
+
+Technology Stack:
+
+```text
+Spring AI
+Ollama
+Qwen Model
+```
+
+Characteristics:
+
+* Local model execution
+* No external API dependency
+* No token consumption costs
+* Offline-capable inference
+
+---
+
+## 10. Infrastructure Layer
 
 Provides:
 
-- metrics
-- request tracing
-- monitoring
-- operational visibility
+* Security
+* Correlation IDs
+* Redis integration
+* Configuration management
+* Exception handling
+
+---
+
+## 11. Observability Layer
+
+Provides:
+
+* Metrics
+* Request tracing
+* Monitoring
+* Operational visibility
+* AI inference monitoring
 
 Technologies:
 
-- Micrometer
-- Prometheus
-- Grafana
+```text
+Micrometer
+Prometheus
+Grafana
+```
+
+---
+
+# AI Investigation Flow
+
+```text
+Admin User
+      |
+      v
+POST /admin/risk-decisions/{transactionId}/investigation-summary
+      |
+      v
+AiInvestigationController
+      |
+      v
+AiInvestigationService
+      |
+      v
+Load RiskDecisionTraceEntity
+      |
+      v
+FraudPromptBuilder
+      |
+      v
+Spring AI ChatClient
+      |
+      v
+Ollama
+      |
+      v
+Generated Investigation Summary
+      |
+      v
+JSON Response
+```
+
+---
+
+# AI Investigation Endpoint
+
+Endpoint:
+
+```http
+POST /admin/risk-decisions/{transactionId}/investigation-summary
+```
+
+Access Control:
+
+```text
+ROLE_ADMIN
+```
+
+Supported Decisions:
+
+```text
+REVIEW
+DECLINED
+```
+
+Excluded Decisions:
+
+```text
+APPROVED
+```
+
+Response:
+
+```json
+{
+  "transactionId": "2e3e92f4-8cf8-4ba5-a97b-7a177812389e",
+  "status": "REVIEW",
+  "summary": "The transaction was flagged for manual review due to elevated fraud risk indicators..."
+}
+```
+
+---
+
+# AI Observability
+
+Metrics:
+
+```text
+risk.ai.investigation.requests
+risk.ai.investigation.success
+risk.ai.investigation.failure
+risk.ai.investigation.latency
+```
+
+Logged Events:
+
+```text
+ai_investigation_started
+ai_investigation_entity_found
+ai_investigation_completed
+ai_investigation_failed
+```
+
+Monitored Attributes:
+
+```text
+Transaction Id
+Decision Id
+Inference Latency
+Success Rate
+Failure Rate
+```
 
 ---
 
@@ -271,16 +495,37 @@ Each layer owns a distinct responsibility.
 
 Every decision is traceable through:
 
-- reason codes
-- ML metadata
-- policy thresholds
-- audit records
+* Reason codes
+* ML metadata
+* Policy thresholds
+* Audit records
+
+---
+
+## AI-Assisted Explainability
+
+The AI layer never participates in transaction approval or rejection.
+
+Responsibilities:
+
+* Explain decisions
+* Summarize fraud indicators
+* Recommend analyst actions
+
+The authoritative fraud decision remains within:
+
+```text
+Hard Rules
+ML Scoring
+Soft Rules
+Policy Decision Engine
+```
 
 ---
 
 ## Extensibility
 
-New rules and ML models can be integrated without redesigning orchestration.
+New rules, models, AI providers, and investigation workflows can be integrated without redesigning orchestration.
 
 ---
 
@@ -292,23 +537,29 @@ The service is horizontally scalable.
 
 ## Operational Reliability
 
-Resilience and idempotency mechanisms ensure production-grade behavior.
+Resilience, idempotency, caching, and observability mechanisms ensure production-grade behavior.
 
 ---
 
 # Reliability Characteristics
 
-- Graceful degradation
-- Retry-safe processing
-- Replay protection
-- Deterministic orchestration
-- Centralized exception handling
+* Graceful degradation
+* Retry-safe processing
+* Replay protection
+* Deterministic orchestration
+* Centralized exception handling
+* AI response caching
 
 ---
 
 # Scalability Characteristics
 
-- Stateless orchestration
-- Cache-ready architecture
-- Horizontally deployable
-- Infrastructure decoupled
+* Stateless orchestration
+* Cache-enabled architecture
+* Horizontally deployable
+* Infrastructure decoupled
+* AI provider abstraction ready
+* Local or cloud LLM compatible
+
+```
+```

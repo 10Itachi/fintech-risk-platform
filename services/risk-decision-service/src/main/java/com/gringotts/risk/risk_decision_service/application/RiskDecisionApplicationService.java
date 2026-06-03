@@ -232,6 +232,7 @@ public class RiskDecisionApplicationService {
 
             try {
                 entity = saveWithRetry(trace, request);
+                LOGGER.info("save_with_retry transactionId={} entity={}", transactionId, entity);
             } catch (DataIntegrityViolationException ex) {
                 meterRegistry.counter("risk.db.duplicate").increment();
                 LOGGER.warn("db_duplicate transactionId={}", transactionId);
@@ -300,7 +301,7 @@ public class RiskDecisionApplicationService {
             RiskDecisionTraceEntity entity = traceMapper.toEntity(trace, request);
             RiskDecisionTraceEntity saved = riskDecisionRepository.save(entity);
 
-            LOGGER.debug("trace_persisted transactionId={} decisionId={}",
+            LOGGER.info("trace_persisted transactionId={} decisionId={}",
                     transactionId, saved.getId());
 
             return saved;

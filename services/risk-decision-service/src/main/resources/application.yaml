@@ -40,6 +40,12 @@ spring:
       type: redis
       redis:
         time-to-live: ${CACHE_TTL}
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: qwen2.5-coder:14b
 
 ml:
   model:

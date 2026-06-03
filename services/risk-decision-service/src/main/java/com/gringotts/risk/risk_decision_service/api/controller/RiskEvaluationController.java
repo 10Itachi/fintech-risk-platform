@@ -4,6 +4,9 @@ import com.gringotts.dto.RiskDecisionRequest;
 import com.gringotts.dto.RiskDecisionResponse;
 import com.gringotts.risk.risk_decision_service.AdminDto.RiskDecisionAdminResponse;
 import com.gringotts.risk.risk_decision_service.application.RiskDecisionApplicationService;
+import com.gringotts.risk.risk_decision_service.infrastructure.aiService.AiInvestigationService;
+import com.gringotts.risk.risk_decision_service.infrastructure.aiService.InvestigationSummaryResponse;
+import jakarta.transaction.Transaction;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -25,9 +28,10 @@ public class RiskEvaluationController {
     private static final Logger LOGGER = LoggerFactory.getLogger(RiskEvaluationController.class);
 
     private final RiskDecisionApplicationService service;
-
-    public RiskEvaluationController(RiskDecisionApplicationService service) {
+    private final AiInvestigationService aiInvestigationService;
+    public RiskEvaluationController(RiskDecisionApplicationService service, AiInvestigationService aiInvestigationService) {
         this.service = service;
+        this.aiInvestigationService = aiInvestigationService;
     }
 
     /**
@@ -99,6 +103,15 @@ public class RiskEvaluationController {
         Page<RiskDecisionAdminResponse> response =
                 service.getAllDecisions(page, size, from, to);
 
+        return ResponseEntity.ok(response);
+    }
+
+    //AI Api
+    @PostMapping("/{transactionId}/investigation-summary")
+    public ResponseEntity<InvestigationSummaryResponse> investigate(
+            @PathVariable String transactionId) {
+        InvestigationSummaryResponse response = aiInvestigationService
+                .generateInvestigationSummary(transactionId);
         return ResponseEntity.ok(response);
     }
 }

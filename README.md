@@ -1,32 +1,44 @@
 # Gringotts Fraud Platform
 
-# Distributed Event-Driven ML-Powered Transaction Fraud Detection Platform
+# Distributed Event-Driven AI-Assisted ML-Powered Transaction Fraud Detection Platform
 
 ## Overview
 
-Gringotts Fraud Platform is a production-style distributed financial transaction processing and fraud detection system designed using modern microservice architecture principles.
+Gringotts Fraud Platform is a production-style distributed financial transaction processing, fraud detection, and AI-assisted investigation platform designed using modern microservice architecture principles.
 
 The platform simulates how enterprise-grade banking and fintech systems process secure transactions while performing:
 
-* real-time fraud detection
-* behavioral risk evaluation
-* ML-powered fraud scoring
-* distributed transaction orchestration
-* event-driven communication
-* audit-safe observability
-* retry-safe asynchronous processing
-* secure machine-to-machine authentication
+- real-time fraud detection
+- behavioral risk evaluation
+- ML-powered fraud scoring
+- AI-powered fraud investigation summaries
+- explainable fraud decisioning
+- distributed transaction orchestration
+- event-driven communication
+- audit-safe observability
+- retry-safe asynchronous processing
+- secure machine-to-machine authentication
 
 The architecture combines:
 
-* synchronous orchestration
-* asynchronous event processing
-* distributed consistency patterns
-* resilient infrastructure
-* operational observability
-* ML-based decisioning
+- synchronous orchestration
+- asynchronous event processing
+- distributed consistency patterns
+- resilient infrastructure
+- operational observability
+- ML-based fraud decisioning
+- Generative AI-powered fraud explainability
 
-to emulate real-world financial backend systems.
+to emulate real-world financial backend systems used by modern banks and fintech organizations.
+
+The platform demonstrates how Machine Learning and Generative AI can work together within a financial risk ecosystem:
+
+- Machine Learning predicts fraud probability
+- Policy engines make deterministic approval decisions
+- Generative AI explains fraud outcomes in business-readable language
+- Fraud analysts receive AI-generated investigation summaries and recommended actions
+
+This separation preserves deterministic and auditable fraud decisions while introducing enterprise-grade AI-assisted investigation capabilities.
 
 ---
 
@@ -34,16 +46,20 @@ to emulate real-world financial backend systems.
 
 The platform is designed to demonstrate:
 
-* distributed systems engineering
-* microservice orchestration
-* event-driven architecture
-* fraud evaluation pipelines
-* resilient transaction workflows
-* distributed idempotency
-* transactional consistency
-* secure service communication
-* observability-first architecture
-* ML integration in backend systems
+- distributed systems engineering
+- microservice orchestration
+- event-driven architecture
+- fraud evaluation pipelines
+- resilient transaction workflows
+- distributed idempotency
+- transactional consistency
+- secure service communication
+- observability-first architecture
+- ML integration in backend systems
+- generative AI integration
+- AI-assisted fraud investigation
+- explainable AI workflows
+- LLM-powered operational analysis
 
 ---
 
@@ -71,10 +87,12 @@ The platform is designed to demonstrate:
          |             |         |                    |           |
          v             |         v                    |           v
                        |                              |
-+------------------+   |  +------------------+        |        +------------------+
-|   User Service   |   |  |Transaction Svc   |  synch.|  Feign | Risk Decision    |
-|                  |   |  |                  | -------|------->| Service          |
-+------------------+   |  +------------------+        |        +------------------+
++------------------+   |  +------------------+        |        +------------------------+.     +------------------------+
+|   User Service   |   |  |Transaction Svc   |  synch.|  Feign | Risk Decision          |      |   AI Investigation     |
+|                  |   |  |                  | -------|------->| Service                |--->. |         Summary        |
+|                  |      |                  |                 | Hard rules, Ml Scoring |      | Spring AI,Ollama,Prompt|
+|                  |   |  |                  |                 | policy,Ollama,Spring AI|      | Builder.Explainability |
++------------------+   |  +------------------+        |        +------------------------+      +------------------------+
                        |         |                    |                   ^
                        |         |                    |                   |
                        |         |                    |                   |
@@ -129,15 +147,16 @@ The platform is designed to demonstrate:
 
 # Infrastructure Components
 
-| Component  | Purpose                         |
-| ---------- | ------------------------------- |
-| MySQL      | Persistent storage              |
-| Redis      | Distributed locking and caching |
-| Kafka      | Event-driven communication      |
-| Keycloak   | Identity and access management  |
-| Prometheus | Metrics collection              |
-| Grafana    | Operational dashboards          |
-| Docker     | Containerized infrastructure    |
+| Component  | Purpose                                               |
+| ---------- | ----------------------------------------------------- |
+| MySQL      | Persistent storage                                    |
+| Redis      | Distributed locking and caching                       |
+| Kafka      | Event-driven communication                            |
+| Keycloak   | Identity and access management                        |
+| Prometheus | Metrics collection                                    |
+| Grafana    | Operational dashboards                                |
+| Docker     | Containerized infrastructure                          |
+| Ollama     | Local LLM inference for fraud investigation summaries |
 
 ---
 
@@ -145,20 +164,26 @@ The platform is designed to demonstrate:
 
 The platform implements several production-grade backend engineering concepts:
 
-* distributed transaction orchestration
-* event-driven architecture
-* transactional outbox pattern
-* distributed idempotency
-* Redis-based coordination
-* Kafka asynchronous messaging
-* ML-powered fraud scoring
-* behavioral fraud analysis
-* secure JWT authentication
-* OAuth2 resource server security
-* observability-first architecture
-* retry-safe workflows
-* eventual consistency
-* fault-tolerant orchestration
+- distributed transaction orchestration
+- event-driven architecture
+- transactional outbox pattern
+- distributed idempotency
+- Redis-based coordination
+- Kafka asynchronous messaging
+- ML-powered fraud scoring
+- behavioral fraud analysis
+- secure JWT authentication
+- OAuth2 resource server security
+- observability-first architecture
+- retry-safe workflows
+- eventual consistency
+- fault-tolerant orchestration
+- AI-assisted fraud investigation
+- Generative AI integration
+- Spring AI orchestration
+- LLM-powered explainability
+- investigation summary generation
+- AI observability and inference monitoring
 
 ---
 
@@ -168,23 +193,23 @@ The Gateway Service acts as the centralized security and routing layer.
 
 Responsibilities include:
 
-* JWT authentication
-* route authorization
-* centralized request routing
-* Redis-backed rate limiting
-* circuit breakers
-* retry handling
-* correlation ID propagation
-* observability instrumentation
+- JWT authentication
+- route authorization
+- centralized request routing
+- Redis-backed rate limiting
+- circuit breakers
+- retry handling
+- correlation ID propagation
+- observability instrumentation
 
 Built Using:
 
-* Spring Cloud Gateway
-* Spring WebFlux
-* Spring Security
-* Keycloak
-* Redis
-* Resilience4j
+- Spring Cloud Gateway
+- Spring WebFlux
+- Spring Security
+- Keycloak
+- Redis
+- Resilience4j
 
 ---
 
@@ -192,19 +217,19 @@ Built Using:
 
 Responsible for:
 
-* user lifecycle management
-* Keycloak integration
-* JWT-based authorization
-* Redis caching
-* resilient identity-provider communication
+- user lifecycle management
+- Keycloak integration
+- JWT-based authorization
+- Redis caching
+- resilient identity-provider communication
 
 Features:
 
-* cache-aside pattern
-* compensating transactions
-* ownership-based authorization
-* role-based access control
-* resilience-protected IAM integration
+- cache-aside pattern
+- compensating transactions
+- ownership-based authorization
+- role-based access control
+- resilience-protected IAM integration
 
 ---
 
@@ -214,19 +239,19 @@ Acts as the distributed orchestration engine of the platform.
 
 Responsibilities:
 
-* transaction lifecycle orchestration
-* idempotent request handling
-* fraud-service integration
-* outbox event publishing
-* distributed coordination
+- transaction lifecycle orchestration
+- idempotent request handling
+- fraud-service integration
+- outbox event publishing
+- distributed coordination
 
 Implemented Concepts:
 
-* Redis distributed locking
-* transactional outbox pattern
-* Kafka event publishing
-* synchronous risk evaluation
-* retry-safe orchestration
+- Redis distributed locking
+- transactional outbox pattern
+- Kafka event publishing
+- synchronous risk evaluation
+- retry-safe orchestration
 
 ---
 
@@ -236,20 +261,65 @@ Enterprise-grade fraud evaluation engine.
 
 The service performs:
 
-* deterministic hard-rule evaluation
-* heuristic behavioral analysis
-* ML fraud scoring
-* policy decision orchestration
-* explainable fraud evaluation
+- deterministic hard-rule evaluation
+- heuristic behavioral analysis
+- ML fraud scoring
+- policy decision orchestration
+- explainable fraud evaluation
 
 Key Features:
 
-* Redis-backed idempotency
-* ML inference pipeline
-* behavioral intelligence
-* explainable reason codes
-* audit-safe persistence
-* distributed-safe orchestration
+- Redis-backed idempotency
+- ML inference pipeline
+- behavioral intelligence
+- explainable reason codes
+- audit-safe persistence
+- distributed-safe orchestration
+
+AI-Powered Fraud Investigation
+
+The service includes a Generative AI investigation layer that transforms fraud evaluation results into business-readable investigation reports.
+
+Capabilities:
+
+Spring AI integration
+Ollama-hosted local LLM
+Fraud investigation summary generation
+Analyst recommendation generation
+Risk indicator explanation
+Redis-cached investigation reports
+
+Investigation flow:
+
+Risk Decision Trace
+|
+v
+FraudPromptBuilder
+|
+v
+Spring AI ChatClient
+|
+v
+Ollama
+|
+v
+Investigation Summary
+
+The AI layer does not participate in fraud decisioning.
+
+Authoritative decisions remain within:
+
+Hard Rules
+
+- Soft Rules
+- ML Scoring
+- Policy Engine
+
+The AI layer only provides:
+
+explainability
+analyst guidance
+business-readable summaries
 
 ---
 
@@ -257,11 +327,11 @@ Key Features:
 
 Asynchronous communication microservice responsible for:
 
-* Kafka event consumption
-* transactional email delivery
-* AWS SES integration
-* notification failure recovery
-* retry-safe event processing
+- Kafka event consumption
+- transactional email delivery
+- AWS SES integration
+- notification failure recovery
+- retry-safe event processing
 
 The service isolates communication workloads from transaction orchestration.
 
@@ -273,12 +343,12 @@ Centralized audit and analytics platform.
 
 Responsibilities include:
 
-* immutable audit persistence
-* Kafka event consumption
-* Excel-based export generation
-* operational analytics
-* forensic-grade transaction traceability
-* failed-event persistence
+- immutable audit persistence
+- Kafka event consumption
+- Excel-based export generation
+- operational analytics
+- forensic-grade transaction traceability
+- failed-event persistence
 
 The architecture separates analytics workloads from transactional processing.
 
@@ -290,11 +360,11 @@ The ML pipeline powers the fraud-intelligence layer of the platform.
 
 Capabilities include:
 
-* synthetic transaction generation
-* behavioral feature engineering
-* fraud labeling
-* logistic regression model training
-* Java-compatible model export
+- synthetic transaction generation
+- behavioral feature engineering
+- fraud labeling
+- logistic regression model training
+- Java-compatible model export
 
 The exported model artifact is consumed by:
 
@@ -304,9 +374,9 @@ risk-decision-service
 
 The architecture maintains:
 
-* Python ↔ Java feature parity
-* deterministic inference
-* production-safe scoring consistency
+- Python ↔ Java feature parity
+- deterministic inference
+- production-safe scoring consistency
 
 ---
 
@@ -320,12 +390,12 @@ OAuth2 Resource Server + JWT Authentication + Keycloak
 
 Security features include:
 
-* stateless authentication
-* machine-to-machine trust
-* role-based authorization
-* audience validation
-* JWT propagation
-* secure gateway enforcement
+- stateless authentication
+- machine-to-machine trust
+- role-based authorization
+- audience validation
+- JWT propagation
+- secure gateway enforcement
 
 ---
 
@@ -335,10 +405,10 @@ Kafka powers asynchronous communication between services.
 
 Primary asynchronous workflows:
 
-* transaction finalized events
-* notification events
-* observability events
-* audit persistence flows
+- transaction finalized events
+- notification events
+- observability events
+- audit persistence flows
 
 The platform implements:
 
@@ -354,11 +424,11 @@ to ensure reliable event delivery.
 
 Redis is used for:
 
-* distributed locking
-* idempotency handling
-* retry-safe orchestration
-* duplicate request prevention
-* caching
+- distributed locking
+- idempotency handling
+- retry-safe orchestration
+- duplicate request prevention
+- caching
 
 ---
 
@@ -366,21 +436,27 @@ Redis is used for:
 
 The platform includes operational observability using:
 
-* Micrometer
-* Prometheus
-* Grafana
-* structured logging
-* correlation IDs
-* health probes
-* metrics instrumentation
+- Micrometer
+- Prometheus
+- Grafana
+- structured logging
+- correlation IDs
+- health probes
+- metrics instrumentation
 
 Supports:
 
-* latency monitoring
-* request tracing
-* failure analytics
-* operational debugging
-* SLA visibility
+- latency monitoring
+- request tracing
+- failure analytics
+- operational debugging
+- SLA visibility
+
+* AI request count
+* AI success rate
+* AI failure rate
+* LLM inference latency
+* investigation cache effectiveness
 
 ---
 
@@ -390,13 +466,13 @@ The platform supports containerized execution using Docker.
 
 Containerized components include:
 
-* microservices
-* Redis
-* Kafka
-* MySQL
-* Keycloak
-* observability stack
-* ML pipeline
+- microservices
+- Redis
+- Kafka
+- MySQL
+- Keycloak
+- observability stack
+- ML pipeline
 
 The architecture is designed for future cloud-native deployment.
 
@@ -424,12 +500,12 @@ final-project/
 
 Run infrastructure containers:
 
-* MySQL
-* Redis
-* Kafka
-* Keycloak
-* Prometheus
-* Grafana
+- MySQL
+- Redis
+- Kafka
+- Keycloak
+- Prometheus
+- Grafana
 
 ---
 
@@ -471,18 +547,18 @@ Start services in appropriate order:
 
 The project demonstrates implementation of:
 
-* distributed systems
-* microservice orchestration
-* event-driven communication
-* distributed idempotency
-* eventual consistency
-* resilient orchestration
-* secure machine authentication
-* Kafka asynchronous messaging
-* Redis coordination
-* ML integration in backend systems
-* observability-first engineering
-* fraud detection pipelines
+- distributed systems
+- microservice orchestration
+- event-driven communication
+- distributed idempotency
+- eventual consistency
+- resilient orchestration
+- secure machine authentication
+- Kafka asynchronous messaging
+- Redis coordination
+- ML integration in backend systems
+- observability-first engineering
+- fraud detection pipelines
 
 ---
 
@@ -490,17 +566,17 @@ The project demonstrates implementation of:
 
 Planned future improvements include:
 
-* Kubernetes deployment
-* OpenTelemetry tracing
-* centralized logging
-* service discovery
-* schema registry integration
-* feature-store integration
-* model registry support
-* stream processing
-* autoscaling infrastructure
-* cloud-native deployment
-* object-storage-backed ML artifacts
+- Kubernetes deployment
+- OpenTelemetry tracing
+- centralized logging
+- service discovery
+- schema registry integration
+- feature-store integration
+- model registry support
+- stream processing
+- autoscaling infrastructure
+- cloud-native deployment
+- object-storage-backed ML artifacts
 
 ---
 
@@ -508,15 +584,15 @@ Planned future improvements include:
 
 This project demonstrates practical implementation of:
 
-* enterprise Java backend engineering
-* distributed systems architecture
-* event-driven backend workflows
-* fraud detection engineering
-* ML-enhanced transaction processing
-* resilient microservice communication
-* operational observability
-* secure distributed authentication
-* scalable backend architecture
+- enterprise Java backend engineering
+- distributed systems architecture
+- event-driven backend workflows
+- fraud detection engineering
+- ML-enhanced transaction processing
+- resilient microservice communication
+- operational observability
+- secure distributed authentication
+- scalable backend architecture
 
 ---
 
@@ -525,15 +601,18 @@ This project demonstrates practical implementation of:
 Gringotts Fraud Platform is a:
 
 ```text
-Production-style distributed event-driven fraud detection and transaction processing platform
+Production-style distributed event-driven fraud detection and transaction processing platform enhanced with Machine Learning and Generative AI-powered fraud investigation capabilities.
 ```
 
-designed to simulate how modern financial systems implement:
+The platform demonstrates:
 
-* secure transaction orchestration
-* ML-powered fraud evaluation
-* asynchronous event processing
-* resilient distributed workflows
-* operational observability
-* scalable microservice architecture
-* fault-tolerant backend systems
+secure transaction orchestration
+ML-powered fraud evaluation
+AI-assisted fraud investigation
+asynchronous event processing
+resilient distributed workflows
+operational observability
+scalable microservice architecture
+fault-tolerant backend systems
+explainable fraud decisioning
+modern AI-enhanced backend engineering

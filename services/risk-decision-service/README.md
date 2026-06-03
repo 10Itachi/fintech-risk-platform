@@ -1,511 +1,494 @@
-# security.md
+# Risk Decision Service
 
-# Security Architecture
+Production-grade fraud detection and risk decisioning microservice built using Spring Boot, Machine Learning, Redis, OAuth2 Security, Observability, and Generative AI.
 
-# Security Overview
+---
 
-The `risk-decision-service` uses a production-style stateless security architecture built using:
+# Overview
+
+The Risk Decision Service evaluates financial transactions and determines whether they should be:
+
+- APPROVED
+- REVIEWED
+- DECLINED
+
+The service combines:
+
+- Deterministic Fraud Rules
+- Behavioral Risk Analysis
+- Machine Learning Fraud Scoring
+- Policy-Based Decisioning
+- Redis Idempotency Protection
+- AI-Powered Fraud Investigation Summaries
+
+The platform is designed using microservice architecture principles and production-grade operational practices including observability, resilience, security, and auditability.
+
+---
+
+# Key Features
+
+## Fraud Detection Engine
+
+- Hard Rule Evaluation
+- Soft Rule Evaluation
+- Behavioral Risk Analysis
+- Policy-Based Decisioning
+- Explainable Reason Codes
+
+---
+
+## Machine Learning Integration
+
+- Logistic Regression Fraud Model
+- Feature Engineering Pipeline
+- Probability-Based Fraud Scoring
+- Model Metadata Tracking
+- Versioned Model Support
+
+---
+
+## AI-Powered Fraud Investigation
+
+Integrated Spring AI with locally hosted Ollama models to generate business-readable fraud investigation summaries.
+
+Capabilities:
+
+- Explain fraud decisions
+- Summarize risk indicators
+- Generate analyst recommendations
+- Convert technical reason codes into business language
+- Cache investigation reports using Redis
+
+Example:
 
 ```text
-Spring Security + OAuth2 Resource Server + JWT
-```
+Decision:
+DECLINED
 
-The service supports both:
+Reason Codes:
+AMOUNT_LIMIT_EXCEEDED
+DAILY_AMOUNT_LIMIT_EXCEEDED
 
-- service-to-service authentication
-- user-context authentication through API gateway
-
-The implementation includes:
-
-- JWT signature validation
-- issuer validation
-- audience validation
-- client validation
-- role-based authorization
-- custom JWT validation
-- custom JWT authority extraction
-- centralized authentication failure handling
-
----
-
-# Security Architecture Flow
-
-```text
-Incoming Request
-        |
-        v
-OAuth2 Resource Server
-        |
-        v
-JWT Signature Validation
-        |
-        v
-Issuer Validation
-        |
-        v
-CustomJwtValidator
-        |
-        v
-JwtAuthConverter
-        |
-        v
-Spring Security Authorization
-        |
-        v
-Controller Access
+AI Output:
+Investigation Summary
+Key Risk Indicators
+Recommended Action
 ```
 
 ---
 
-# Security Components
-
-| Component | Responsibility |
-|---|---|
-| RiskServiceSecurityConfig | Main Spring Security configuration |
-| CustomJwtValidator | Custom token validation |
-| JwtAuthConverter | JWT role extraction |
-| JwtDecoder | JWT decoding and validation |
-| AuthenticationEntryPoint | Handles authentication failures |
-| AccessDeniedHandler | Handles authorization failures |
-
----
-
-# Authentication Architecture
-
-The service acts as:
-
-```text
-OAuth2 Resource Server
-```
-
-JWT tokens are validated using:
-
-```text
-NimbusJwtDecoder
-```
-
-Validation sources:
-
-- issuer URI
-- JWK Set URI
-
----
-
-# JWT Validation Pipeline
-
-The JWT validation process contains two layers.
-
----
-
-# 1. Default Spring Security Validation
-
-Handled automatically using:
-
-```java
-JwtValidators.createDefaultWithIssuer()
-```
-
-Performs:
-
-| Validation | Purpose |
-|---|---|
-| Signature Validation | Verifies token authenticity |
-| Expiry Validation | Rejects expired tokens |
-| Issuer Validation | Ensures trusted issuer |
-
----
-
-# 2. Custom JWT Validation
+## Security
 
 Implemented using:
 
 ```text
-CustomJwtValidator
+Spring Security
+OAuth2 Resource Server
+JWT Authentication
 ```
 
-Adds domain-specific validation logic.
+Features:
 
----
+- Stateless Authentication
+- JWT Validation
+- Role-Based Authorization
+- Correlation ID Tracing
+- Secure API Access
 
-# Custom JWT Validation Rules
-
-# Audience Validation
-
-Ensures token audience contains:
+AI Investigation APIs are restricted to:
 
 ```text
-risk-decision-service
+ROLE_ADMIN
 ```
-
-Purpose:
-
-- prevents token misuse
-- prevents cross-service token replay
-- ensures token intended for this service
 
 ---
 
-# Client Validation
+## Redis Idempotency Protection
 
-The validator extracts:
+Redis protects the evaluation pipeline from duplicate execution.
+
+Features:
+
+- Distributed Locking
+- Replay Protection
+- Retry-Safe Processing
+- Transaction State Management
+- Concurrent Request Prevention
+
+---
+
+## Observability
+
+Operational visibility implemented using:
 
 ```text
-azp
+Micrometer
+Prometheus
+Grafana
+Spring Boot Actuator
 ```
 
-claim from JWT.
+Metrics include:
 
-Allowed clients:
-
-| Client | Purpose |
-|---|---|
-| api-gateway | User-context requests |
-| transaction-service | Service-to-service requests |
-
-Unknown clients are rejected.
+- Request Volume
+- Latency
+- Error Rates
+- Fraud Decision Distribution
+- ML Scoring Performance
+- AI Investigation Latency
 
 ---
 
-# User Token Validation
+## Resilience
 
-When client:
+Production-grade fault tolerance through:
+
+- Idempotency Protection
+- Timeout Protection
+- Centralized Exception Handling
+- Retry-Safe Architecture
+- Correlation-Based Failure Tracking
+
+---
+
+# Architecture
 
 ```text
-api-gateway
+Client
+   |
+   v
+API Layer
+   |
+   v
+Application Service Layer
+   |
+   v
+Risk Decision Context
+   |
+   v
+Hard Rules
+   |
+   v
+Soft Rules
+   |
+   v
+ML Scoring
+   |
+   v
+Policy Engine
+   |
+   v
+Decision Persistence
+   |
+   v
+AI Investigation Layer
+   |
+   v
+Investigation Summary
 ```
-
-is detected:
-
-Validation checks:
-
-- subject presence
-- authenticated user existence
-
-User roles are later validated through Spring Security authorization.
 
 ---
 
-# Service Token Validation
-
-When client:
+# Risk Evaluation Flow
 
 ```text
-transaction-service
-```
-
-is detected:
-
-The validator checks:
-
-```text
-resource_access
-```
-
-claim.
-
-Expected role:
-
-```text
-RISKCALLER
-```
-
-Required structure:
-
-```json
-{
-  "resource_access": {
-    "risk-decision-service": {
-      "roles": ["RISKCALLER"]
-    }
-  }
-}
-```
-
----
-
-# Invalid Token Conditions
-
-The following conditions reject authentication:
-
-| Condition | Error |
-|---|---|
-| Missing audience | invalid_audience |
-| Missing azp | invalid_token |
-| Missing subject | invalid_user |
-| Missing service role | invalid_role |
-| Unknown client | invalid_client |
-
----
-
-# Authorization Architecture
-
-Authorization is configured using:
-
-```java
-authorizeHttpRequests()
-```
-
----
-
-# Endpoint Authorization Rules
-
-| Endpoint | Access Rule |
-|---|---|
-| `/v3/api-docs/**` | Permit All |
-| `/swagger-ui/**` | Permit All |
-| `/actuator/**` | Permit All |
-| `/risk/evaluate` | ROLE_RISKCALLER |
-| `/risk/admin/**` | ROLE_ADMIN |
-| All Other APIs | Authenticated |
-
----
-
-# JWT Authority Extraction
-
-Implemented using:
-
-```text
-JwtAuthConverter
-```
-
-The converter extracts authorities from:
-
-- realm roles
-- client roles
-
----
-
-# Realm Role Extraction
-
-Extracted from:
-
-```json
-{
-  "realm_access": {
-    "roles": ["USER", "ADMIN"]
-  }
-}
-```
-
-Purpose:
-
-- user authorization
-- admin access control
-
----
-
-# Client Role Extraction
-
-Extracted from:
-
-```json
-{
-  "resource_access": {
-    "risk-decision-service": {
-      "roles": ["RISKCALLER"]
-    }
-  }
-}
-```
-
-Purpose:
-
-- service authorization
-- microservice communication security
-
----
-
-# Spring Authority Mapping
-
-Extracted roles are converted into:
-
-```text
-ROLE_<ROLE_NAME>
-```
-
-Examples:
-
-| JWT Role | Spring Authority |
-|---|---|
-| ADMIN | ROLE_ADMIN |
-| USER | ROLE_USER |
-| RISKCALLER | ROLE_RISKCALLER |
-
----
-
-# Security Filter Chain
-
-```text
-Incoming Request
+Incoming Transaction
         |
         v
-Bearer Token Extraction
+Authentication
         |
         v
-JWT Decoder
+Request Validation
         |
         v
-Default Validators
+Redis Idempotency Check
         |
         v
-CustomJwtValidator
+Feature Generation
         |
         v
-JwtAuthConverter
+Hard Rules
         |
         v
-Authorization Rules
+Soft Rules
         |
         v
-Controller
+ML Scoring
+        |
+        v
+Policy Engine
+        |
+        v
+Decision Persistence
+        |
+        v
+Response
 ```
 
 ---
 
-# Authentication Failure Handling
-
-Authentication failures are handled using:
+# AI Investigation Flow
 
 ```text
-AuthenticationEntryPoint
+Admin User
+      |
+      v
+Investigation Endpoint
+      |
+      v
+Risk Decision Trace Lookup
+      |
+      v
+FraudPromptBuilder
+      |
+      v
+Spring AI ChatClient
+      |
+      v
+Ollama LLM
+      |
+      v
+Investigation Summary
 ```
-
-Handles:
-
-- invalid tokens
-- expired tokens
-- malformed JWTs
-- audience failures
-- issuer failures
 
 ---
 
-# Example 401 Response
+# Technology Stack
 
-```json
-{
-  "status": 401,
-  "message": "Invalid or expired token"
-}
-```
-
----
-
-# Authorization Failure Handling
-
-Authorization failures are handled using:
+## Backend
 
 ```text
-AccessDeniedHandler
+Java 21
+Spring Boot
+Spring Security
+Spring Data JPA
+Spring Validation
+Spring AI
 ```
 
-Handles:
-
-- insufficient roles
-- forbidden access
-- privilege violations
-
----
-
-# Example 403 Response
-
-```json
-{
-  "status": 403,
-  "message": "Insufficient permissions"
-}
-```
-
----
-
-# Stateless Security Design
-
-The service is fully stateless.
-
-Characteristics:
-
-- no HTTP session storage
-- token-driven authentication
-- horizontally scalable
-- gateway-compatible
-- cloud-native friendly
-
----
-
-# Security Logging
-
-The security layer logs:
-
-- security initialization
-- JWT decoder configuration
-- unauthorized access attempts
-- forbidden access attempts
-
-Purpose:
-
-- auditability
-- operational debugging
-- security monitoring
-
----
-
-# Security Configuration Flow
+## Data Layer
 
 ```text
-application.yml
-        |
-        v
-Issuer URI
-JWK Set URI
-        |
-        v
-JwtDecoder
-        |
-        v
-Spring Security Resource Server
+MySQL
+Redis
+```
+
+## Machine Learning
+
+```text
+Python
+Logistic Regression
+Feature Scaling
+```
+
+## Observability
+
+```text
+Micrometer
+Prometheus
+Grafana
+Spring Boot Actuator
+```
+
+## Security
+
+```text
+OAuth2
+JWT
+Keycloak
+```
+
+## Infrastructure
+
+```text
+Docker
+Docker Compose
 ```
 
 ---
 
-# Security Strengths
+# Core APIs
 
-| Capability | Benefit |
-|---|---|
-| Audience Validation | Prevents token misuse |
-| Client Validation | Prevents unauthorized services |
-| Role Validation | Fine-grained authorization |
-| Stateless Design | Horizontal scalability |
-| OAuth2 Resource Server | Enterprise-standard security |
-| JWT-based Security | Decoupled authentication |
+## Risk Evaluation
 
----
+```http
+POST /risk/evaluate
+```
 
-# Production Security Recommendations
-
-## Recommended Enhancements
-
-- API gateway rate limiting
-- mTLS internal communication
-- rotating signing keys
-- secret vault integration
-- distributed authorization
-- centralized audit logging
-- WAF integration
-- token revocation strategy
-- SIEM integration
+Evaluates transaction fraud risk.
 
 ---
 
-# Security Characteristics Summary
+## Historical Decisions
 
-| Characteristic | Status |
-|---|---|
-| Stateless | YES |
-| OAuth2 Compatible | YES |
-| JWT Based | YES |
-| Audience Validation | YES |
-| Service Authorization | YES |
-| User Authorization | YES |
-| Custom Validators | YES |
-| Role-Based Access | YES |
-| Production Ready | YES |
+```http
+GET /risk/api/v1/decisions
+```
+
+Returns paginated fraud decisions.
+
+---
+
+## Decision By ID
+
+```http
+GET /risk/api/v1/decisions/{decisionId}
+```
+
+Returns a specific decision trace.
+
+---
+
+## Decision By Transaction ID
+
+```http
+GET /risk/api/v1/decisions/transaction/{transactionId}
+```
+
+Returns decision details for a transaction.
+
+---
+
+## AI Investigation Summary
+
+```http
+POST /risk/{transactionId}/investigation-summary
+```
+
+Generates AI-powered fraud investigation reports.
+
+Access:
+
+```text
+ROLE_ADMIN
+```
+
+---
+
+# Persistence Model
+
+## Risk Decision Trace
+
+Stores:
+
+- Transaction ID
+- Final Status
+- ML Probability
+- Model Metadata
+- Policy Version
+- Evaluation Timestamp
+
+---
+
+## Risk Decision Reason
+
+Stores:
+
+- Reason Codes
+- Audit Trail Data
+- Explainability Metadata
+
+---
+
+# Observability Metrics
+
+## Risk Evaluation Metrics
+
+```text
+Request Count
+Error Rate
+Latency
+Decision Distribution
+ML Scoring Time
+```
+
+## AI Investigation Metrics
+
+```text
+risk.ai.investigation.requests
+risk.ai.investigation.success
+risk.ai.investigation.failure
+risk.ai.investigation.latency
+```
+
+---
+
+# Design Principles
+
+## Explainability
+
+Every decision is traceable through:
+
+- Rule Matches
+- Reason Codes
+- ML Metadata
+- Policy Versions
+- Audit Records
+
+---
+
+## AI-Assisted Investigation
+
+The AI layer never participates in fraud decisions.
+
+Responsibilities:
+
+- Explain decisions
+- Summarize risk indicators
+- Recommend analyst actions
+
+The authoritative decision remains within:
+
+```text
+Hard Rules
+Soft Rules
+ML Scoring
+Policy Engine
+```
+
+---
+
+## Scalability
+
+- Stateless Processing
+- Redis-Based Coordination
+- Horizontal Scaling Support
+- Cloud-Ready Deployment
+
+---
+
+## Reliability
+
+- Replay Protection
+- Distributed Locking
+- Graceful Failure Handling
+- Centralized Error Management
+
+---
+
+# Future Enhancements
+
+- Circuit Breakers
+- Bulkhead Isolation
+- Distributed Retries
+- AI Provider Abstraction
+- Behavioral Feature Caching
+- Advanced Fraud Models
+- Real-Time Fraud Streaming
+- Multi-Model Risk Scoring
+
+---
+
+# Project Highlights
+
+- Production-Style Microservice Architecture
+- ML-Powered Fraud Detection
+- Redis Distributed Idempotency
+- OAuth2/JWT Security
+- Prometheus + Grafana Observability
+- AI-Powered Fraud Investigation Summaries
+- Spring AI + Ollama Integration
+- Role-Based Security Controls
+- Fully Auditable Fraud Decision Pipeline
+
+This service demonstrates modern backend engineering practices for building scalable, secure, observable, and explainable fraud detection systems.

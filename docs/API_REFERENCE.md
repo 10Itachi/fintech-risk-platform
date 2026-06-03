@@ -323,6 +323,8 @@ The Risk Decision Service performs:
 - behavioral analysis
 - ML scoring
 - policy decisioning
+- AI-powered fraud investigation
+- fraud decision explainability
 
 ---
 
@@ -417,15 +419,122 @@ Purpose:
 
 ---
 
-# Fraud Decision Outcomes
+### Generate AI Investigation Summary
 
-| Decision | Meaning                |
-| -------- | ---------------------- |
-| APPROVED | Low-risk transaction   |
-| REVIEW   | Manual review required |
-| DECLINED | Fraud detected         |
+```http
+POST /risk/{transactionId}/investigation-summary
+```
+
+Purpose:
+
+- generate AI-powered fraud investigation reports
+- explain fraud decisions in business-readable language
+- summarize risk indicators
+- recommend analyst actions
+- assist fraud investigation teams
+- improve operational explainability
+
+Access:
+
+```text
+ROLE_ADMIN
+```
+
+Only administrators and fraud analysts can access this endpoint.
 
 ---
+
+### AI Investigation Flow
+
+```text
+Risk Decision Trace
+        |
+        v
+FraudPromptBuilder
+        |
+        v
+Spring AI ChatClient
+        |
+        v
+Ollama LLM
+        |
+        v
+Investigation Summary
+```
+
+---
+
+### Sample Request
+
+```http
+POST /risk/2e3e92f4-8cf8-4ba5-a97b-7a177812389e/investigation-summary
+```
+
+---
+
+### Sample Response
+
+```json
+{
+  "transactionId": "2e3e92f4-8cf8-4ba5-a97b-7a177812389e",
+  "status": "DECLINED",
+  "summary": "Investigation Summary: The transaction with ID 2e3e92f4-8cf8-4ba5-a97b-7a177812389e was declined due to exceeding both the single transaction amount limit and the daily transaction amount limit. The machine learning probability for fraud is zero, indicating low suspicion of fraudulent activity.\n\nKey Risk Indicators: AMOUNT_LIMIT_EXCEEDED, DAILY_AMOUNT_LIMIT_EXCEEDED\n\nRecommended Action: Review the customer's account settings to ensure that the transaction limits are appropriate for their spending habits. If necessary, contact the customer to adjust the limits or verify if this was an authorized transaction. No further action is required based on current risk indicators."
+}
+```
+
+---
+
+### AI Investigation Characteristics
+
+Technology Stack:
+
+```text
+Spring AI
+Ollama
+Qwen Model
+Redis Cache
+Micrometer
+```
+
+Capabilities:
+
+- AI-assisted fraud investigation
+- business-readable decision explanations
+- risk indicator summarization
+- analyst recommendation generation
+- cached investigation summaries
+- inference latency monitoring
+
+---
+
+# Fraud Decision Outcomes
+
+| Decision | Meaning                            |
+| -------- | ---------------------------------- |
+| APPROVED | Low-risk transaction               |
+| REVIEW   | Manual review required             |
+| DECLINED | Fraud detected or policy violation |
+
+---
+
+# AI Investigation Eligibility
+
+| Decision | Investigation Supported |
+| -------- | ----------------------- |
+| APPROVED | No                      |
+| REVIEW   | Yes                     |
+| DECLINED | Yes                     |
+
+---
+
+# AI Investigation Metrics
+
+```text
+risk.ai.investigation.requests
+risk.ai.investigation.success
+risk.ai.investigation.failure
+risk.ai.investigation.latency
+```
 
 # 4. Notification Service APIs
 
