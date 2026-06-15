@@ -131,6 +131,119 @@ The platform is designed to demonstrate:
 
 ---
 
+# Application Walkthrough
+
+The platform provides a Gringotts-themed frontend that demonstrates the complete fraud investigation workflow.
+
+## Authentication
+
+![Login](docs/images/login.png)
+
+Secure authentication using Keycloak and OAuth2.
+
+## Administrative Dashboard
+
+The administrator dashboard acts as the operational control center for the platform. Administrators can manage users, review transactions, inspect fraud decisions, and access AI-generated investigation summaries.
+
+![Administrative Dashboard](docs/images/AdminDashboard.png)
+
+---
+
+## User Onboarding Workflow
+
+New users are provisioned through the User Service and secured using Keycloak-based authentication and authorization.
+
+### Create User
+
+Administrators can create new platform users and assign appropriate roles.
+
+![Create User](docs/images/UserCreationDashboard.png)
+
+### User Creation Confirmation
+
+Successful onboarding generates a unique user identifier and activates the account within the platform.
+
+![User Created Successfully](docs/images/UserCreatedMessage.png)
+
+---
+
+## Transaction Processing Workflow
+
+Users can initiate financial transactions that are subsequently evaluated by the fraud detection pipeline.
+
+### Create Transaction
+
+Transaction details including amount, account information, transaction type, payment method, and country are submitted through the platform.
+
+![Create Transaction](docs/images/TransactionCreationDashBoard.png)
+
+### Transaction Submission Confirmation
+
+After successful validation and processing, the platform generates a transaction identifier and records the initial transaction state.
+
+![Transaction Created Successfully](docs/images/TrasactionCreatedMessage.png)
+
+---
+
+## Fraud Detection & Risk Evaluation
+
+The Risk Decision Service combines deterministic fraud policies with machine learning models to evaluate transaction risk.
+
+### Review Required Transaction
+
+This example shows a transaction flagged for manual review based on machine learning risk analysis.
+
+![Review Risk Decision](docs/images/ReviewRiskDecisionLookUp.png)
+
+Key information provided:
+
+- Fraud probability score
+- Model metadata
+- Risk classification
+- Explainable reason codes
+- Decision status
+
+### Declined Transaction
+
+This example demonstrates a transaction rejected by business policy rules despite a low machine learning fraud probability.
+
+![Declined Risk Decision](docs/images/DeclinedRiskDecisionLookUp.png)
+
+This highlights the separation between:
+
+- Machine learning predictions
+- Deterministic fraud policies
+- Final business decisions
+
+---
+
+## AI-Assisted Fraud Investigation
+
+Spring AI and Ollama are integrated to provide explainable fraud investigation summaries for analysts.
+
+### Review Investigation Summary
+
+For transactions requiring manual review, the platform generates contextual explanations and recommended analyst actions.
+
+![AI Review Summary](docs/images/AiReviewSummary.png)
+
+The summary includes:
+
+- Investigation overview
+- Risk indicators
+- Supporting evidence
+- Recommended next actions
+
+### Declined Transaction Investigation
+
+For policy-rejected transactions, the AI layer explains the decision rationale and provides analyst guidance.
+
+![AI Declined Summary](docs/images/AiSummaryDeclined.png)
+
+This capability improves transparency and reduces manual investigation effort while maintaining deterministic decision authority within the fraud platform.
+
+---
+
 # Core Services
 
 | Service                           | Responsibility                                         |
