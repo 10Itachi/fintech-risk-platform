@@ -34,7 +34,7 @@ public class RiskServiceSecurityConfig {
                                 "/swagger-ui.html",
                                 "/actuator/**").permitAll()
                         .requestMatchers("/risk/evaluate").hasRole("RISKCALLER")
-                        .requestMatchers("/risk/api/**").hasRole("ADMIN")
+                        .requestMatchers("/risk/api/**","/risk/api/v1/ai/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth -> oauth

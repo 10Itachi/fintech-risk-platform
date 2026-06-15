@@ -20,7 +20,7 @@ public class CorsConfig {
 
         // FRONTEND URL
         config.setAllowedOrigins(List.of(
-                "http://localhost:3000"
+                "http://localhost:5173"
         ));
 
         // ALLOWED METHODS

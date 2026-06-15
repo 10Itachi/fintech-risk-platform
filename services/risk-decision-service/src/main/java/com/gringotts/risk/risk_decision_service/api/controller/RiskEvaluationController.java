@@ -107,7 +107,8 @@ public class RiskEvaluationController {
     }
 
     //AI Api
-    @PostMapping("/{transactionId}/investigation-summary")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/api/v1/ai/{transactionId}/investigation-summary")
     public ResponseEntity<InvestigationSummaryResponse> investigate(
             @PathVariable String transactionId) {
         InvestigationSummaryResponse response = aiInvestigationService

@@ -22,7 +22,10 @@ public class CustomJwtValidator implements OAuth2TokenValidator<Jwt> {
     );
 
     // User login client
-    private static final String USER_CLIENT = "api-gateway";
+    private static final Set<String> USER_CLIENTS = Set.of(
+            "api-gateway",
+            "gringotts-frontend"
+    );
 
     // Expected audience
     private static final String EXPECTED_AUDIENCE = "risk-decision-service";
@@ -58,7 +61,7 @@ public class CustomJwtValidator implements OAuth2TokenValidator<Jwt> {
         }
 
         // 3️⃣ USER TOKEN validation (api-gateway)
-        if (USER_CLIENT.equals(clientId)) {
+        if (USER_CLIENTS.contains(clientId)) {
 
             String subject = jwt.getSubject();
             if (subject == null || subject.isBlank()) {

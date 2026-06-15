@@ -6,18 +6,15 @@ spring:
   application:
     name: ${SPRING_APPLICATION_NAME}
 
-  # Request body limit
   http:
     codecs:
       max-in-memory-size: ${MAX_IN_MEMORY_SIZE}
 
-  # Redis for rate limiting
   data:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
 
-  # JWT validation
   security:
     oauth2:
       resourceserver:
@@ -33,7 +30,6 @@ spring:
             connect-timeout: ${GATEWAY_CONNECT_TIMEOUT}
             response-timeout: ${GATEWAY_RESPONSE_TIMEOUT}
 
-          # Remove duplicate CORS headers
           default-filters:
             - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
 
@@ -54,32 +50,23 @@ spring:
             # User APIs
             - id: user-service
               uri: ${USER_SERVICE_URI}
-
               predicates:
                 - Path=/api/v1/users/**
-
               filters:
-
-                # Per-user throttling
                 - name: RequestRateLimiter
                   args:
                     redis-rate-limiter.replenishRate: ${USER_RATE_LIMIT_REPLENISH}
                     redis-rate-limiter.burstCapacity: ${USER_RATE_LIMIT_BURST}
                     key-resolver: "#{@userKeyResolver}"
-
-                # Service protection
                 - name: CircuitBreaker
                   args:
                     name: userCircuitBreaker
                     fallbackUri: forward:/fallback/service-unavailable
-
-                # Retry only safe GET APIs
                 - name: Retry
                   args:
                     retries: ${USER_RETRY_COUNT}
                     methods: GET
                     statuses: BAD_GATEWAY,GATEWAY_TIMEOUT
-
                     backoff:
                       firstBackoff: ${USER_RETRY_FIRST_BACKOFF}
                       maxBackoff: ${USER_RETRY_MAX_BACKOFF}
@@ -88,32 +75,23 @@ spring:
             # Transaction APIs
             - id: transaction-service
               uri: ${TRANSACTION_SERVICE_URI}
-
               predicates:
                 - Path=/api/v1/transactions/**
-
               filters:
-
-                # Per-user throttling
                 - name: RequestRateLimiter
                   args:
                     redis-rate-limiter.replenishRate: ${TRANSACTION_RATE_LIMIT_REPLENISH}
                     redis-rate-limiter.burstCapacity: ${TRANSACTION_RATE_LIMIT_BURST}
                     key-resolver: "#{@userKeyResolver}"
-
-                # Service protection
                 - name: CircuitBreaker
                   args:
                     name: transactionCircuitBreaker
                     fallbackUri: forward:/fallback/service-unavailable
-
-                # Retry only safe GET APIs
                 - name: Retry
                   args:
                     retries: ${TRANSACTION_RETRY_COUNT}
                     methods: GET
                     statuses: BAD_GATEWAY,GATEWAY_TIMEOUT
-
                     backoff:
                       firstBackoff: ${TRANSACTION_RETRY_FIRST_BACKOFF}
                       maxBackoff: ${TRANSACTION_RETRY_MAX_BACKOFF}
@@ -122,86 +100,88 @@ spring:
             # Notification APIs
             - id: notification-service
               uri: ${NOTIFICATION_SERVICE_URI}
-
               predicates:
                 - Path=/api/v1/notifications/**
 
             # Observability APIs
             - id: observability-service
               uri: ${OBSERVABILITY_SERVICE_URI}
-
               predicates:
                 - Path=/api/v1/observability/**
 
-            # Risk APIs
-            - id: risk-service-admin
+            # Risk AI Summary — MUST be before risk-service-admin
+            - id: risk-service-ai-summary
               uri: ${RISK_SERVICE_URI}
-
               predicates:
-                - Path=/risk/api/**
-
+                - Path=/risk/api/v1/ai/**
+              metadata:
+                response-timeout: 60000
+                connect-timeout: 3000
               filters:
-
-                # Admin throttling
                 - name: RequestRateLimiter
                   args:
                     redis-rate-limiter.replenishRate: ${RISK_RATE_LIMIT_REPLENISH}
                     redis-rate-limiter.burstCapacity: ${RISK_RATE_LIMIT_BURST}
                     key-resolver: "#{@userKeyResolver}"
 
-                # Service protection
+                # Circuit Breaker is active again
+                - name: CircuitBreaker
+                  args:
+                    name: aiSummaryCircuitBreaker
+                    fallbackUri: forward:/fallback/service-unavailable
+                    statusCodes: INTERNAL_SERVER_ERROR, BAD_GATEWAY
+
+            # Risk APIs — all other /risk/api/** routes
+            - id: risk-service-admin
+              uri: ${RISK_SERVICE_URI}
+              predicates:
+                - Path=/risk/api/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${RISK_RATE_LIMIT_REPLENISH}
+                    redis-rate-limiter.burstCapacity: ${RISK_RATE_LIMIT_BURST}
+                    key-resolver: "#{@userKeyResolver}"
                 - name: CircuitBreaker
                   args:
                     name: riskCircuitBreaker
                     fallbackUri: forward:/fallback/service-unavailable
-
-                # Retry only safe GET APIs
                 - name: Retry
                   args:
                     retries: ${RISK_RETRY_COUNT}
                     methods: GET
                     statuses: BAD_GATEWAY,GATEWAY_TIMEOUT
-
                     backoff:
                       firstBackoff: ${RISK_RETRY_FIRST_BACKOFF}
                       maxBackoff: ${RISK_RETRY_MAX_BACKOFF}
                       factor: ${RISK_RETRY_FACTOR}
 
-# Actuator endpoints
 management:
   endpoints:
     web:
       exposure:
         include: health,metrics,prometheus
-
   endpoint:
     health:
       show-details: never
       probes:
         enabled: true
-
   metrics:
     tags:
       application: ${SPRING_APPLICATION_NAME}
 
-# Structured logging
 logging:
   pattern:
     console: ${LOG_PATTERN}
-
-  level: #replace INFO with DEBUG during troubleshooting.
+  level:
     root: INFO
     org.springframework.cloud.gateway: INFO
     reactor.netty: INFO
     org.springframework.security: INFO
 
-
-# Circuit breaker config
 resilience4j:
   circuitbreaker:
-
     instances:
-
       transactionCircuitBreaker:
         timeoutDuration: ${CB_TIMEOUT_DURATION}
         slidingWindowType: COUNT_BASED
@@ -231,3 +211,19 @@ resilience4j:
         waitDurationInOpenState: ${CB_WAIT_DURATION_OPEN}
         permittedNumberOfCallsInHalfOpenState: ${CB_HALF_OPEN_CALLS}
         automaticTransitionFromOpenToHalfOpenEnabled: true
+
+      aiSummaryCircuitBreaker:
+        timeoutDuration: PT60S  # Tells the CB to look for a 60s window
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 2
+        failureRateThreshold: 50
+        waitDurationInOpenState: PT10S
+        permittedNumberOfCallsInHalfOpenState: 2
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+
+  # FIX: Moved timelimiter completely outside circuitbreaker block!
+  timelimiter:
+    instances:
+      aiSummaryCircuitBreaker:
+        timeoutDuration: PT60S
