@@ -1,37 +1,66 @@
 package com.gringotts.risk.risk_decision_service.domain.decision;
 
-
 import com.gringotts.enums.TransactionStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+
+import static com.gringotts.enums.TransactionStatus.*;
 
 @Component
 public class RiskDecisionPolicy {
 
+    private static final Logger log = LoggerFactory.getLogger(RiskDecisionPolicy.class);
     private final RiskPolicyProperties props;
 
     public RiskDecisionPolicy(RiskPolicyProperties props) {
         this.props = props;
     }
 
-    public TransactionStatus decide (RiskDecisionContext context) {
-        // for hard rule
-        if (context.isDeclined()) return TransactionStatus.DECLINED;
+    public TransactionStatus decide(RiskDecisionContext context) {
 
-        // 2. High Risk Threshold (ML or Soft Score)
-        if (context.getMlProbability() >= props.getDeclineThreshold() ||
-                context.getSoftScore() >= props.getSoftDeclineScore()) {
-            context.addReason("POLICY_DECLINE_LIMIT_EXCEEDED");
+        // 1. If it's already hard-failed, we don't need ML stats
+        if (context.isDeclined()) {
             return TransactionStatus.DECLINED;
         }
 
-        // 3. Medium Risk Threshold (Requires Manual Review)
-        if (context.getMlProbability() >= props.getReviewThreshold() ||
-                context.getSoftScore() >= props.getSoftReviewScore()) {
-            context.addReason("POLICY_REVIEW_REQUIRED");
-            return TransactionStatus.REVIEW;
-        }
-        // 4. Otherwise Approve
-        return TransactionStatus.APPROVED;
-    }
+        // 2. Otherwise, we proceed with ML-based logic
+        context.ensureMlEvaluated();
+        double finalRisk = context.getAdjustedRisk();
+        double baseProb = context.getMlProbability();
 
+        TransactionStatus decision;
+
+        // HIGH RISK → DECLINE
+        if (finalRisk >= props.getDeclineThreshold()) {
+            context.addReason("RISK_HIGH");
+            decision = DECLINED;
+        }
+
+        // MEDIUM RISK → REVIEW
+        else if (finalRisk >= props.getReviewThreshold()) {
+            context.addReason("RISK_MEDIUM");
+            decision = REVIEW;
+        }
+
+        // LOW RISK → APPROVE
+        else {
+            decision = APPROVED;
+        }
+
+
+        // LOG (AUDIT-GRADE)
+        log.info(
+                "Decision | txnId={} | decision={} | finalRisk={} | mlProb={} | reasons={} | modelVersion={} | policyVersion={} | policyActivatedAt={}",
+                context.getRequest().getTransactionId(),
+                decision,
+                finalRisk,
+                baseProb,
+                context.getReasonCodes(),
+                context.getModelMetadataSafe().getModelVersion(),
+                context.getPolicyVersionSafe(),
+                context.getPolicyActivatedAtSafe()
+        );
+        return decision;
+    }
 }

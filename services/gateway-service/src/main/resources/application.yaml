@@ -1,0 +1,229 @@
+server:
+  port: ${GATEWAY_PORT}
+  max-http-request-header-size: ${MAX_HTTP_REQUEST_HEADER_SIZE}
+
+spring:
+  application:
+    name: ${SPRING_APPLICATION_NAME}
+
+  http:
+    codecs:
+      max-in-memory-size: ${MAX_IN_MEMORY_SIZE}
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+
+          httpclient:
+            connect-timeout: ${GATEWAY_CONNECT_TIMEOUT}
+            response-timeout: ${GATEWAY_RESPONSE_TIMEOUT}
+
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
+
+          routes:
+
+            # Keycloak login
+            - id: auth-login
+              uri: ${KEYCLOAK_URI}
+              predicates:
+                - Path=/realms/gringotts/protocol/openid-connect/token
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${AUTH_RATE_LIMIT_REPLENISH}
+                    redis-rate-limiter.burstCapacity: ${AUTH_RATE_LIMIT_BURST}
+                    key-resolver: "#{@ipKeyResolver}"
+
+            # User APIs
+            - id: user-service
+              uri: ${USER_SERVICE_URI}
+              predicates:
+                - Path=/api/v1/users/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${USER_RATE_LIMIT_REPLENISH}
+                    redis-rate-limiter.burstCapacity: ${USER_RATE_LIMIT_BURST}
+                    key-resolver: "#{@userKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: userCircuitBreaker
+                    fallbackUri: forward:/fallback/service-unavailable
+                - name: Retry
+                  args:
+                    retries: ${USER_RETRY_COUNT}
+                    methods: GET
+                    statuses: BAD_GATEWAY,GATEWAY_TIMEOUT
+                    backoff:
+                      firstBackoff: ${USER_RETRY_FIRST_BACKOFF}
+                      maxBackoff: ${USER_RETRY_MAX_BACKOFF}
+                      factor: ${USER_RETRY_FACTOR}
+
+            # Transaction APIs
+            - id: transaction-service
+              uri: ${TRANSACTION_SERVICE_URI}
+              predicates:
+                - Path=/api/v1/transactions/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${TRANSACTION_RATE_LIMIT_REPLENISH}
+                    redis-rate-limiter.burstCapacity: ${TRANSACTION_RATE_LIMIT_BURST}
+                    key-resolver: "#{@userKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: transactionCircuitBreaker
+                    fallbackUri: forward:/fallback/service-unavailable
+                - name: Retry
+                  args:
+                    retries: ${TRANSACTION_RETRY_COUNT}
+                    methods: GET
+                    statuses: BAD_GATEWAY,GATEWAY_TIMEOUT
+                    backoff:
+                      firstBackoff: ${TRANSACTION_RETRY_FIRST_BACKOFF}
+                      maxBackoff: ${TRANSACTION_RETRY_MAX_BACKOFF}
+                      factor: ${TRANSACTION_RETRY_FACTOR}
+
+            # Notification APIs
+            - id: notification-service
+              uri: ${NOTIFICATION_SERVICE_URI}
+              predicates:
+                - Path=/api/v1/notifications/**
+
+            # Observability APIs
+            - id: observability-service
+              uri: ${OBSERVABILITY_SERVICE_URI}
+              predicates:
+                - Path=/api/v1/observability/**
+
+            # Risk AI Summary — MUST be before risk-service-admin
+            - id: risk-service-ai-summary
+              uri: ${RISK_SERVICE_URI}
+              predicates:
+                - Path=/risk/api/v1/ai/**
+              metadata:
+                response-timeout: 60000
+                connect-timeout: 3000
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${RISK_RATE_LIMIT_REPLENISH}
+                    redis-rate-limiter.burstCapacity: ${RISK_RATE_LIMIT_BURST}
+                    key-resolver: "#{@userKeyResolver}"
+
+                # Circuit Breaker is active again
+                - name: CircuitBreaker
+                  args:
+                    name: aiSummaryCircuitBreaker
+                    fallbackUri: forward:/fallback/service-unavailable
+                    statusCodes: INTERNAL_SERVER_ERROR, BAD_GATEWAY
+
+            # Risk APIs — all other /risk/api/** routes
+            - id: risk-service-admin
+              uri: ${RISK_SERVICE_URI}
+              predicates:
+                - Path=/risk/api/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${RISK_RATE_LIMIT_REPLENISH}
+                    redis-rate-limiter.burstCapacity: ${RISK_RATE_LIMIT_BURST}
+                    key-resolver: "#{@userKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: riskCircuitBreaker
+                    fallbackUri: forward:/fallback/service-unavailable
+                - name: Retry
+                  args:
+                    retries: ${RISK_RETRY_COUNT}
+                    methods: GET
+                    statuses: BAD_GATEWAY,GATEWAY_TIMEOUT
+                    backoff:
+                      firstBackoff: ${RISK_RETRY_FIRST_BACKOFF}
+                      maxBackoff: ${RISK_RETRY_MAX_BACKOFF}
+                      factor: ${RISK_RETRY_FACTOR}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${SPRING_APPLICATION_NAME}
+
+logging:
+  pattern:
+    console: ${LOG_PATTERN}
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: INFO
+    reactor.netty: INFO
+    org.springframework.security: INFO
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      transactionCircuitBreaker:
+        timeoutDuration: ${CB_TIMEOUT_DURATION}
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: ${CB_SLIDING_WINDOW_SIZE}
+        minimumNumberOfCalls: ${CB_MINIMUM_CALLS}
+        failureRateThreshold: ${CB_FAILURE_RATE_THRESHOLD}
+        waitDurationInOpenState: ${CB_WAIT_DURATION_OPEN}
+        permittedNumberOfCallsInHalfOpenState: ${CB_HALF_OPEN_CALLS}
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+
+      userCircuitBreaker:
+        timeoutDuration: ${CB_TIMEOUT_DURATION}
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: ${CB_SLIDING_WINDOW_SIZE}
+        minimumNumberOfCalls: ${CB_MINIMUM_CALLS}
+        failureRateThreshold: ${CB_FAILURE_RATE_THRESHOLD}
+        waitDurationInOpenState: ${CB_WAIT_DURATION_OPEN}
+        permittedNumberOfCallsInHalfOpenState: ${CB_HALF_OPEN_CALLS}
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+
+      riskCircuitBreaker:
+        timeoutDuration: ${CB_TIMEOUT_DURATION}
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: ${CB_SLIDING_WINDOW_SIZE}
+        minimumNumberOfCalls: ${CB_MINIMUM_CALLS}
+        failureRateThreshold: ${CB_FAILURE_RATE_THRESHOLD}
+        waitDurationInOpenState: ${CB_WAIT_DURATION_OPEN}
+        permittedNumberOfCallsInHalfOpenState: ${CB_HALF_OPEN_CALLS}
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+
+      aiSummaryCircuitBreaker:
+        timeoutDuration: PT60S  # Tells the CB to look for a 60s window
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 2
+        failureRateThreshold: 50
+        waitDurationInOpenState: PT10S
+        permittedNumberOfCallsInHalfOpenState: 2
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+
+  # FIX: Moved timelimiter completely outside circuitbreaker block!
+  timelimiter:
+    instances:
+      aiSummaryCircuitBreaker:
+        timeoutDuration: PT60S

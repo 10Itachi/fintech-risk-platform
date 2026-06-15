@@ -1,0 +1,19 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak_dev
+    command: 
+      - start-dev
+      - --import-realm
+    environment:
+      - KC_HOSTNAME=auth.localhost   ## added to resolve local host issue of docker and local env running to gether 
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_HTTP_ENABLED=true
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/opt/keycloak/data
+      - ./realm-export:/opt/keycloak/data/import

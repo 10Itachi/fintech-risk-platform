@@ -1,36 +1,124 @@
 server:
-  port: 8081
+  port: ${SERVER_PORT}
 
 spring:
   application:
-    name: transaction-service
+    name: ${SPRING_APPLICATION_NAME}
 
   datasource:
-    # 1. Added createDatabaseIfNotExist=true to handle the "Unknown Database" error
-    url: jdbc:mysql://localhost:3306/gbank_Transactions?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: root
-    password: Emma10watson*
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
-    # 2. Set to 'create' for the VERY FIRST run only.
-    # After you see your tables in MySQL, change this to 'update'.
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${HIBERNATE_DDL_AUTO}
+
+    show-sql: ${HIBERNATE_SHOW_SQL}
+
     properties:
       hibernate:
-        format_sql: true
-        # Cleaned up the dialect property (Spring Boot 3 uses MySQLDialect for 8+)
-        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: ${HIBERNATE_FORMAT_SQL}
+        highlight_sql: ${HIBERNATE_HIGHLIGHT_SQL}
+        dialect: ${HIBERNATE_DIALECT}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+
+  security:
+    oauth2:
+
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+# =============================================================
+# SERVICE-TO-SERVICE KEYCLOAK CONFIG
+# =============================================================
+keycloak:
+  token-url: ${KEYCLOAK_TOKEN_URL}
+  client-id: ${KEYCLOAK_CLIENT_ID}
+  client-secret: ${KEYCLOAK_CLIENT_SECRET}
+
+outbox:
+  batch-size: ${OUTBOX_BATCH_SIZE}
+  max-retry: ${OUTBOX_MAX_RETRY}
+  scheduler-delay-ms: ${OUTBOX_SCHEDULER_DELAY_MS}
 
 risk:
   service:
-    url: http://localhost:8082
+    url: ${RISK_SERVICE_URL}
 
-service:
-  jwt:
-    secret: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    issuer: "transaction-service"
-    audience: "risk-decision-service"
-    ttl-seconds: 60
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: ${FEIGN_CONNECT_TIMEOUT}
+        readTimeout: ${FEIGN_READ_TIMEOUT}
+        loggerLevel: ${FEIGN_LOGGER_LEVEL}
+
+  okhttp:
+    enabled: true
+
+resilience4j:
+  retry:
+    instances:
+
+      keycloakToken:
+        maxAttempts: ${KEYCLOAK_RETRY_MAX_ATTEMPTS}
+        waitDuration: ${KEYCLOAK_RETRY_WAIT_DURATION}
+
+      riskService:
+        maxAttempts: ${RISK_RETRY_MAX_ATTEMPTS}
+        waitDuration: ${RISK_RETRY_WAIT_DURATION}
+        exponential-backoff-multiplier: ${RISK_RETRY_EXPONENTIAL_BACKOFF}
+
+        retryExceptions:
+          - java.io.IOException
+          - feign.RetryableException
+          - java.net.SocketTimeoutException
+
+  circuitbreaker:
+    instances:
+
+      riskService:
+        slidingWindowSize: ${RISK_CB_SLIDING_WINDOW_SIZE}
+        minimumNumberOfCalls: ${RISK_CB_MINIMUM_CALLS}
+        failureRateThreshold: ${RISK_CB_FAILURE_THRESHOLD}
+        waitDurationInOpenState: ${RISK_CB_WAIT_DURATION_OPEN_STATE}
+        permittedNumberOfCallsInHalfOpenState: ${RISK_CB_HALF_OPEN_CALLS}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [%X{X-Correlation-ID}] - %msg%n"
+
+  level:
+    root: INFO
+
+    # BUSINESS
+    com.gringotts: INFO
+
+    # SPRING
+    org.springframework.boot: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+
+    # DATABASE
+    com.zaxxer.hikari: WARN
+
+    # FEIGN
+    org.springframework.cloud.openfeign: INFO
+
+    org.springframework.kafka: INFO
+    org.apache.kafka.clients.producer.ProducerConfig: INFO
+    org.apache.kafka.clients.producer.KafkaProducer: INFO
+
+    # OPTIONAL TEMP DEBUG
+    # org.apache.kafka.clients.NetworkClient: DEBUG
+    # org.apache.kafka.clients.producer.internals.Sender: DEBUG
+    #org.hibernate.SQL: DEBUG  ONLY during SQL debugging, org.apache.kafka.clients.NetworkClient: DEBUG

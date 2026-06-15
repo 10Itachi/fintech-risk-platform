@@ -15,7 +15,7 @@ public class UnsupportedChannelForTransactionRule implements HardRule{
 
         return switch (r.getChannel()) {
             case CARD ->
-                    r.getTransactionType() == TransactionType.SELF;
+                    r.getTransactionType() == TransactionType.DEPOSIT;
             case UPI ->
                     r.getTransactionType() == TransactionType.WITHDRAWAL;
             case NET_BANKING ->

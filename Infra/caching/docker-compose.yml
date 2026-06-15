@@ -1,0 +1,16 @@
+services:
+
+  redis:
+    image: redis:7
+    container_name: gringotts-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+    networks:
+      - redis-net
+
+networks:
+  redis-net:
+    driver: bridge

@@ -1,0 +1,100 @@
+server:
+  port: ${USER_SERVICE_PORT:8081}
+
+spring:
+
+  config:
+    import: optional:file:.env
+
+  datasource:
+    url: ${USER_DB_URL}
+    username: ${USER_DB_USERNAME}
+    password: ${USER_DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${USER_DDL_AUTO}
+    show-sql: ${USER_SHOW_SQL}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${USER_ISSUER_URI:http://localhost:8080/realms/gringotts}
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+
+    cache:
+      type: redis
+      redis:
+        time-to-live: 600000  # 10 minutes
+
+keycloak:
+  server-url: ${USER_KEYCLOAK_SERVER_URL}
+  realm: ${USER_KEYCLOAK_REALM}
+  client-id: ${USER_KEYCLOAK_CLIENT_ID}
+  client-secret: ${USER_KEYCLOAK_CLIENT_SECRET}
+  connection-pool-size: 20
+  connection-timeout: 3000
+  socket-timeout: 3000
+
+scheduler:
+  reconciliation:
+    delay: ${SCHEDULER_RECONCILIATION_DELAY}
+    initial-delay: ${SCHEDULER_INITIAL_DELAY}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${USER_ACTUATOR_ENDPOINTS:health,metrics}
+  metrics:
+    tags:
+      application: user-service
+
+resilience4j:
+  retry:
+    instances:
+      keycloakRetry:
+        max-attempts: ${USER_RETRY_ATTEMPTS:3}
+        wait-duration: ${USER_RETRY_WAIT:500ms}
+        exponential-backoff-multiplier: ${USER_RETRY_BACKOFF:2}
+        retryExceptions:
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+
+  circuitbreaker:
+    instances:
+      keycloakCB:
+        sliding-window-size: ${USER_CB_WINDOW:10}
+        failure-rate-threshold: ${USER_CB_FAILURE_RATE:50}
+        wait-duration-in-open-state: ${USER_CB_WAIT:10s}
+        ignoreExceptions:
+          - com.gringotts.userservice.user_service.exception.UserAlreadyExistsException
+        #The Logic: The Circuit Breaker looks at the last 10 completed requests. It’s like a moving history log. Once the 11th request finishes, the 1st one is "forgotten."
+        #The Math: If 5 out of your last 10 requests (50%) fail, the circuit "trips" and stays Open.
+        #The "Cool Down" Period: Once the circuit is Open (because it hit that 50% failure rate), it will stay Open for exactly 10 seconds.
+        #During this time: Every single call to createUser will skip the Keycloak logic entirely and go straight to your createUserFallback method immediately.
+        #After 10 seconds: The circuit moves to a Half-Open state. It will let a few "test" requests through to see if Ke
+
+logging:
+
+  level:
+    ## use trace and debug for detail
+    com.gringotts: INFO
+
+    # org.springframework.cache: TRACE
+    org.springframework.boot: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+
+    # TOMCAT
+    org.apache.catalina: INFO
+    # HIKARI
+    com.zaxxer.hikari: INFO
+
+  pattern:
+      console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [%X{X-Correlation-ID}] - %msg%n"

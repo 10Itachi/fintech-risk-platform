@@ -1,0 +1,24 @@
+# --- Version Control ---
+.git
+.gitignore
+
+# --- IDEs (IntelliJ & VS Code) ---
+.idea
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# --- Build Outputs ---
+target/
+out/
+
+# --- Secrets & Environment (CRITICAL) ---
+.env
+.env.*
+*.env
+
+# --- OS Trash ---
+.DS_Store
+Thumbs.db
+*.log

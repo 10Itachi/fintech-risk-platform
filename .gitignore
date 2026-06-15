@@ -1,51 +1,102 @@
 # ======================
+
 # OS / System
+
 # ======================
+
 .DS_Store
 
 # ======================
+
 # Java / Maven
+
 # ======================
+
 **/target/
 **/out/
 *.class
 
 # ======================
+
 # IDEs
+
 # ======================
+
 .idea/
 .vscode/
 *.iml
 
 # ======================
+
 # Logs
+
 # ======================
+
 *.log
 logs/
 
 # ======================
+
 # Environment / Secrets
+
 # ======================
+
 .env
 *.env
 application-local.yml
 application-local.properties
 
 # ======================
+
 # Python / ML
+
 # ======================
+
 __pycache__/
 *.pyc
 .venv/
 venv/
 
 # ======================
-# Docker
-# ======================
-**/.dockerignore
+
+# Temporary
 
 # ======================
-# Temporary
-# ======================
+
 tmp/
 
+# ======================
+
+# Infra Runtime Data
+
+# NEVER COMMIT RUNTIME STATE
+
+# ======================
+
+infra/**/data/
+infra/**/volumes/
+infra/**/logs/
+
+# Kafka
+
+infra/**/kafka-*-data/
+
+# Grafana
+
+infra/**/grafana-storage/
+
+# Prometheus
+
+infra/**/prometheus-data/
+
+# MySQL
+
+infra/**/mysql-data/
+
+# Redis
+
+infra/**/redis-data/
+
+post\ man\ import/
+project-notes/
+*.zip

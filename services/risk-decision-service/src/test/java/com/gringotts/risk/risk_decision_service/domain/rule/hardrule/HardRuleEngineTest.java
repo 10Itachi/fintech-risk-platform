@@ -33,10 +33,10 @@ class HardRuleEngineTest {
         HardRuleEngine engine =
                 new HardRuleEngine(List.of(rule1, rule2));
 
-        Optional<String> result = engine.evaluate(ctx);
+        List<String> result = engine.evaluate(ctx);
 
-        assertTrue(result.isPresent());
-        assertEquals("RULE_1", result.get());
+        assertTrue(result.contains("RULE_1"));
+        assertEquals("RULE_1", result.get(0));
     }
 
     @Test
@@ -50,9 +50,9 @@ class HardRuleEngineTest {
         HardRuleEngine engine =
                 new HardRuleEngine(List.of(rule1, rule2));
 
-        Optional<String> result = engine.evaluate(ctx);
+        List<String> result = engine.evaluate(ctx);
 
-        assertEquals("RULE_2", result.get());
+        assertEquals("RULE_2", result.get(0));
     }
 
     @Test
@@ -65,7 +65,7 @@ class HardRuleEngineTest {
         HardRuleEngine engine =
                 new HardRuleEngine(List.of(rule1, rule2));
 
-        Optional<String> result = engine.evaluate(ctx);
+        List<String> result = engine.evaluate(ctx);
 
         assertTrue(result.isEmpty());
     }
